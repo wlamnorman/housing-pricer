@@ -1,0 +1,10 @@
+.venv
+dist
+.pytest_cache
+__pycache__
+poetry.lock
+.mypy_cache
+*.ipynb
+.DS_STORE
+*.log
+.ipynb_checkpoints
