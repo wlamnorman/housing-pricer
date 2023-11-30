@@ -6,6 +6,7 @@ from pyrate_limiter import Duration, Rate
 from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, JSONDecodeError, RequestException
 
+
 class ScrapeError(Exception):
     """
     Raise when an error occurs while interacting with website.
@@ -78,4 +79,3 @@ class Scraper:
             raise ScrapeError() from exc
 
         return response.content
-
