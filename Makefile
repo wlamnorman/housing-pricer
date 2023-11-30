@@ -1,7 +1,7 @@
 SOURCES="housing_pricer"
 MAX_LINE_LENGTH=100
 venv:
-	python3.11 -m venv .venv
+	python3.10.10 -m venv .venv
 
 install:
 	poetry lock && poetry build && poetry install
