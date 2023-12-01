@@ -98,7 +98,7 @@ class Scraper:
             raise ScrapeError() from exc
 
     def get(
-        self, endpoint: str, mark_endpoint: bool, retries: int = 2, seconds_delay: int = 1
+        self, endpoint: str, mark_endpoint: bool, tries: int = 2, seconds_delay: int = 1
     ) -> bytes:
         """
         Scrape content from url with retry logic unless already scraped.
@@ -110,16 +110,16 @@ class Scraper:
         mark_endpoint
             If endpoint should be marked as scraped in the DataManager (intended
             to be used for when information is retrieved, not for searches).
-        retries
-            Number of retry attempts.
+        tries
+            Number of request attempts.
         delay
-            Delay between retries in seconds.
+            Delay between tries in seconds.
         """
         if self._data_manager.is_endpoint_scraped(endpoint):
             logger.info("%s already scraped", endpoint)
             raise AlreadyScrapedError(f"{endpoint} already scraped")
 
-        for _ in range(retries):
+        for _ in range(tries):
             try:
                 content = self._try_get_except(endpoint)
                 if mark_endpoint:
@@ -130,5 +130,5 @@ class Scraper:
                 logger.error("%s, retrying in %d seconds...", exc, seconds_delay)
                 time.sleep(secs=seconds_delay)
 
-        logger.info("Failed to retrieve data from %s after %s attempts.", endpoint, retries)
+        logger.info("Failed to retrieve data from %s after %s attempts.", endpoint, tries)
         return b""
