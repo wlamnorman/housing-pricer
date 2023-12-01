@@ -9,6 +9,7 @@ from housing_pricer.scraping.data_manager import DataManager
 
 TEST_DATA_DIR: str = "test_data"
 
+
 class TestScraper(unittest.TestCase):
     def setUp(self):
         self.data_manager_dir = TEST_DATA_DIR
@@ -18,14 +19,13 @@ class TestScraper(unittest.TestCase):
         if os.path.exists(self.endpoint_hash_file):
             os.remove(self.endpoint_hash_file)
 
-
     def test_duplicate_endpoint_scraping(self):
         base_url = "https://example.com"
         data_manager = DataManager(TEST_DATA_DIR)
         scraper = Scraper(base_url, data_manager)
         endpoint = "/test-endpoint"
-        
-        with patch('requests.Session.get') as mocked_get:
+
+        with patch("requests.Session.get") as mocked_get:
             # configure the mock to return a successful response
             mocked_response = MagicMock()
             mocked_response.raise_for_status.return_value = None
@@ -48,6 +48,7 @@ class TestScraper(unittest.TestCase):
         # remove the test_data directory after each test
         if os.path.exists(self.data_manager_dir):
             shutil.rmtree(self.data_manager_dir)
+
 
 if __name__ == "__main__":
     unittest.main()
