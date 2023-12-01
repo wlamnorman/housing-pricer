@@ -7,11 +7,12 @@ install:
 	poetry lock && poetry build && poetry install
 
 dev:
-	@.venv/bin/python -m pip install -e .
+	poetry run -m pip install -e .
 
 lint:
-	black --line-length $(MAX_LINE_LENGTH) --exclude .venv $(SOURCES)
-	pylint $(SOURCES) --max-line-length=$(MAX_LINE_LENGTH) --ignore=.venv --init-import y --rcfile=pylintrc
+	poetry run isort --skip .venv $(SOURCES)
+	poetry run black --line-length $(MAX_LINE_LENGTH) --exclude .venv $(SOURCES)
+	poetry run pylint $(SOURCES) --max-line-length=$(MAX_LINE_LENGTH) --ignore=.venv --rcfile=pylintrc
 
 test:
-	@.venv/bin/python -m pytest
+	poetry run pytest
