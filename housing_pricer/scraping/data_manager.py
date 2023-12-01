@@ -8,6 +8,9 @@ import pickle
 from typing import Any, Iterable
 import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class DataManager:
     """
@@ -30,22 +33,26 @@ class DataManager:
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(level=logging.INFO)
 
     def _get_file_path(self, file_name: str) -> Path:
-        """Concatenates base directory and file name to complete file path."""
+        """
+        Concatenates base directory and file name to complete file path,
+        ensuring the file name ends with '.gz'.
+        """
+        if not file_name.endswith(".gz"):
+            file_name += ".gz"
         return self.base_dir / file_name
 
-    def save_data(self, file_name: str, data: Any):
+    def append_data_to_file(self, file_name: str, data: Any):
         """
-        Save data to a gzip compressed file in the base directory.
+        Save data to a gzip compressed file in the base directory by appending.
 
         Parameters
         ----------
         file_name
             The name of the file to save the data to.
         data
-            The data to be saved. Can be any Python object, USE WITH CAUTION.
+            The data to be saved. Can be any Python object.
         """
         file_path = self._get_file_path(file_name)
         with gzip.open(file_path, "ab") as gz_file:
