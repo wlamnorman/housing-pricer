@@ -1,3 +1,4 @@
+import logging
 from typing import Iterable, Any
 import re
 import json
@@ -6,9 +7,11 @@ from enum import auto
 from strenum import StrEnum
 from tqdm import tqdm
 
-from housing_pricer.scraping.base_scraper import Scraper
+from housing_pricer.scraping.scraper import Scraper, AlreadyScrapedError, ScrapeError
 from housing_pricer.scraping.data_manager import DataManager
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 KEY_MAPPING = {
     "soldPrice": "sold_price",
@@ -29,7 +32,9 @@ class ListingType(StrEnum):
     bostad = auto()
 
 
-def scrape_and_store_search_page(search_result: bytes, scraper: Scraper, data_manager: DataManager):
+def scrape_and_store_search_page(
+    search_result: bytes, scraper: Scraper, data_manager: DataManager, storage_file_name: str
+):
     for listing in tqdm(
         extract_listings(search_result), desc="Collecting search page's listing details"
     ):
@@ -38,14 +43,20 @@ def scrape_and_store_search_page(search_result: bytes, scraper: Scraper, data_ma
         assert listing_type in [ListingType.annons, ListingType.bostad]
 
         try:
-            listing = scraper.get(f"{listing_type}/{listing_id}").decode()
-            listing_info = extract_ad_info(listing, listing_id)
+            listing = scraper.get(f"{listing_type}/{listing_id}", mark_endpoint=True).decode()
+        except AlreadyScrapedError as exc:
+            continue
+        except ScrapeError as exc:
+            logger.error("%s", exc)
+            continue
 
+        try:
+            listing_info = extract_ad_info(listing, listing_id)
         except Exception as exc:
             print(exc)
             continue
 
-        data_manager.append_data_to_file(file_name="testing", data=listing_info)
+        data_manager.append_data_to_file(file_name=storage_file_name, data=listing_info)
 
 
 def extract_listings(content: bytes) -> Iterable[tuple[str, Any]]:

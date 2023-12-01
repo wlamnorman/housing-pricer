@@ -1,11 +1,13 @@
 """
 Scraper class to handle website interactions. Includes rate limiting,
-informative error propagation, logging and re-try logic for requests.
+informative error propagation, logging, re-try logic for requests and
+data management through a DataManager.
 """
 import time
 import logging
 import requests
 
+from housing_pricer.scraping.data_manager import DataManager
 from pyrate_limiter import Duration, Rate
 from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, RequestException
@@ -40,19 +42,23 @@ class ScrapeError(Exception):
         self.response = response
 
 
+class AlreadyScrapedError(Exception):
+    """Exception raised when an endpoint has already been scraped."""
+
+
 class Scraper:
     """Provides methods for scraping webpages."""
 
-    def __init__(self, base_url: str, max_requests_per_minute: int = 15):
+    def __init__(self, base_url: str, data_manager: DataManager, max_requests_per_minute: int = 20):
         """
-        Initialize a scraper with rate limiting.
+        Initialize a scraper with rate limiting and associated DataManager.
 
         Parameters
         ----------
         base_url
             Base url to scrape from.
-        file_path
-            Path for data storage.
+        data_manager
+            DataManager instance for tracking scraped data and saving data.
         max_requests_per_minute
             Max number of requests per minute.
         """
@@ -63,8 +69,9 @@ class Scraper:
             raise_when_fail=False,
             max_delay=Duration.MINUTE.value,
         )
+        self._data_manager = data_manager
 
-    def try_get_except(self, endpoint: str) -> bytes:
+    def _try_get_except(self, endpoint: str) -> bytes:
         """
         Scrape content from url.
 
@@ -87,22 +94,35 @@ class Scraper:
         except (HTTPError, RequestException) as exc:
             raise ScrapeError() from exc
 
-    def get(self, endpoint: str, retries: int = 2, seconds_delay: int = 1) -> bytes:
+    def get(
+        self, endpoint: str, mark_endpoint: bool, retries: int = 2, seconds_delay: int = 1
+    ) -> bytes:
         """
-        Scrape content from url with retry logic.
+        Scrape content from url with retry logic unless already scraped.
 
         Parameters
         ----------
         endpoint
             Endpoint from which to get content from.
+        mark_endpoint
+            If endpoint should be marked as scraped in the DataManager (intended 
+            to be used for when information is retrieved, not for searches).
         retries
             Number of retry attempts.
         delay
             Delay between retries in seconds.
         """
+        if self._data_manager.is_endpoint_scraped(endpoint):
+            logger.info("%s already scraped", endpoint)
+            raise AlreadyScrapedError(f"{endpoint} already scraped")
+
         for _ in range(retries):
             try:
-                return self.try_get_except(endpoint)
+                content = self._try_get_except(endpoint)
+                if mark_endpoint:
+                    self._data_manager.mark_endpoint_scraped(endpoint)
+                return content
+
             except ScrapeError as exc:
                 logger.error("%s, retrying in %d seconds...", exc, seconds_delay)
                 time.sleep(secs=seconds_delay)

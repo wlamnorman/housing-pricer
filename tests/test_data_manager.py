@@ -14,8 +14,10 @@ def test_data_manager():
 
     data_manager.append_data_to_file(file_name, test_data)
     loaded_data = list(data_manager.load_data(file_name))[0]
+    
+    # delete created file after loading but before assert
+    test_file_path = data_manager.base_dir / file_name
+    if test_file_path.exists():
+        test_file_path.unlink()
 
     assert test_data == loaded_data
-
-    # delete the saved test data file
-    (data_manager.base_dir / file_name).unlink()

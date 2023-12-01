@@ -7,6 +7,8 @@ import gzip
 import pickle
 from typing import Any, Iterable
 import logging
+import hashlib
+import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ class DataManager:
     serialization/deserialization and `gzip` for compression.
     """
 
-    def __init__(self, base_dir: str):
+    def __init__(self, base_dir: str, hash_file: str = "endpoint_hashes.json"):
         """
         Initialize the DataManager with a specified base directory.
 
@@ -30,9 +32,34 @@ class DataManager:
         base_dir
             The base directory path as a string where data files will be
             saved and loaded from.
+        hash_file
+            The name of the file to store hashes of scraped endpoints. The
+            hashes ensure we don't scrape the same endpoint multiple times.
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+
+        self.hash_file = self.base_dir / hash_file
+        self.scraped_endpoints = self._load_scraped_endpoints()
+
+    def _load_scraped_endpoints(self):
+        if self.hash_file.exists():
+            with open(self.hash_file, "r") as f:
+                return set(json.load(f))
+        return set()
+
+    def _save_scraped_endpoints(self):
+        with open(self.hash_file, "w") as f:
+            json.dump(list(self.scraped_endpoints), f)
+
+    def is_endpoint_scraped(self, endpoint: str) -> bool:
+        endpoint_hash = hashlib.md5(endpoint.encode()).hexdigest()
+        return endpoint_hash in self.scraped_endpoints
+
+    def mark_endpoint_scraped(self, endpoint: str):
+        endpoint_hash = hashlib.md5(endpoint.encode()).hexdigest()
+        self.scraped_endpoints.add(endpoint_hash)
+        self._save_scraped_endpoints()
 
     def _get_file_path(self, file_name: str) -> Path:
         """
@@ -88,6 +115,6 @@ class DataManager:
                         break
                     except pickle.UnpicklingError as exc:
                         logger.error("Failed to unpickle data from %s: %s", file_path, exc)
-        
+
         except OSError as exc:
             logger.error("Failed to open file %s: %s", file_path, exc)
