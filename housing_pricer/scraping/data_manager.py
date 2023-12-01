@@ -46,6 +46,7 @@ class DataManager:
     def append_data_to_file(self, file_name: str, data: Any):
         """
         Save data to a gzip compressed file in the base directory by appending.
+        Handles errors in file operations and data serialization.
 
         Parameters
         ----------
@@ -55,12 +56,17 @@ class DataManager:
             The data to be saved. Can be any Python object.
         """
         file_path = self._get_file_path(file_name)
-        with gzip.open(file_path, "ab") as gz_file:
-            pickle.dump(data, gz_file)
+        try:
+            with gzip.open(file_path, "ab") as gz_file:
+                pickle.dump(data, gz_file)
+
+        except (OSError, pickle.PicklingError) as exc:
+            logger.error("Failed to save-append to %s: %s", file_path, exc)
 
     def load_data(self, file_name: str) -> Iterable[dict[str, Any]]:
         """
         Load and generate data from a gzip compressed file.
+        Handles errors in file operations and data deserialization.
 
         Parameters
         ----------
@@ -72,9 +78,16 @@ class DataManager:
             Yields data objects from the file.
         """
         file_path = self._get_file_path(file_name)
-        with gzip.open(file_path, "rb") as gz_file:
-            while True:
-                try:
-                    yield pickle.load(gz_file)
-                except EOFError:
-                    break
+        try:
+            with gzip.open(file_path, "rb") as gz_file:
+                while True:
+                    try:
+                        yield pickle.load(gz_file)
+                    except EOFError:
+                        logger.info("Finished loading data from %s", file_path)
+                        break
+                    except pickle.UnpicklingError as exc:
+                        logger.error("Failed to unpickle data from %s: %s", file_path, exc)
+        
+        except OSError as exc:
+            logger.error("Failed to open file %s: %s", file_path, exc)
