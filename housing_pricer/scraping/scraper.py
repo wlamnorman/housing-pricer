@@ -76,7 +76,7 @@ class Scraper:
 
     def _try_get_except(self, endpoint: str) -> bytes:
         """
-        Scrape content from url.
+        Tries to get content; raises ScrapeError if something goes wrong.
 
         Parameters
         ----------
