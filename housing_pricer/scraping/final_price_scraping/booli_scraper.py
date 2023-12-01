@@ -1,9 +1,11 @@
-from housing_pricer.scraping.scraper import Scraper
-from housing_pricer.scraping.data_manager import DataManager
 from _booli_scraping_utils import scrape_and_store_search_page
+
+from housing_pricer.scraping.data_manager import DataManager
+from housing_pricer.scraping.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
 DATA_STORAGE_FILE_NAME: str = "listings_test"
+
 
 def main():
     data_manager = DataManager(DATA_STORAGE_PATH)

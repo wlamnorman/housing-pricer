@@ -3,14 +3,17 @@ Scraper class to handle website interactions. Includes rate limiting,
 informative error propagation, logging, re-try logic for requests and
 data management through a DataManager.
 """
-import time
 import logging
-import requests
 
-from housing_pricer.scraping.data_manager import DataManager
+# pylint: disable=too-few-public-methods
+import time
+
+import requests
 from pyrate_limiter import Duration, Rate
 from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, RequestException
+
+from housing_pricer.scraping.data_manager import DataManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,7 +108,7 @@ class Scraper:
         endpoint
             Endpoint from which to get content from.
         mark_endpoint
-            If endpoint should be marked as scraped in the DataManager (intended 
+            If endpoint should be marked as scraped in the DataManager (intended
             to be used for when information is retrieved, not for searches).
         retries
             Number of retry attempts.

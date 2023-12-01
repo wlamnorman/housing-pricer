@@ -2,13 +2,13 @@
 Defines the DataManager class for handling storing and loading of data.
 """
 
-from pathlib import Path
 import gzip
-import pickle
-from typing import Any, Iterable
-import logging
 import hashlib
 import json
+import logging
+import pickle
+from pathlib import Path
+from typing import Any, Iterable
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,28 +43,69 @@ class DataManager:
         self.scraped_endpoints = self._load_scraped_endpoints()
 
     def _load_scraped_endpoints(self):
+        """
+        Load the set of scraped endpoint hashes from the hash file.
+        """
+
         if self.hash_file.exists():
-            with open(self.hash_file, "r") as f:
-                return set(json.load(f))
+            with open(self.hash_file, "r", encoding="utf-8") as file_path:
+                return set(json.load(file_path))
         return set()
 
     def _save_scraped_endpoints(self):
-        with open(self.hash_file, "w") as f:
-            json.dump(list(self.scraped_endpoints), f)
+        """
+        This method writes the set of endpoint hashes to the hash file
+        in JSON format. It ensures that the state of scraped endpoints
+        is persisted across sessions.
+        """
+        with open(self.hash_file, "w", encoding="utf-8") as file_path:
+            json.dump(list(self.scraped_endpoints), file_path)
 
     def is_endpoint_scraped(self, endpoint: str) -> bool:
+        """
+        Checks if an endpoint has already been scraped.
+
+        Parameters
+        ----------
+        endpoint
+            The endpoint URL to check.
+
+        Returns
+        -------
+            True if the endpoint has already been scraped, False otherwise.
+        """
         endpoint_hash = hashlib.md5(endpoint.encode()).hexdigest()
         return endpoint_hash in self.scraped_endpoints
 
     def mark_endpoint_scraped(self, endpoint: str):
+        """
+        Mark an endpoint as scraped by adding its hash to the set.
+
+        This method calculates the hash of the given endpoint and adds
+        it to the set of scraped endpoints, then saves the updated set
+        to the hash file.
+
+        Parameters
+        ----------
+        endpoint
+            The endpoint URL to mark as scraped.
+        """
         endpoint_hash = hashlib.md5(endpoint.encode()).hexdigest()
         self.scraped_endpoints.add(endpoint_hash)
         self._save_scraped_endpoints()
 
     def _get_file_path(self, file_name: str) -> Path:
         """
-        Concatenates base directory and file name to complete file path,
-        ensuring the file name ends with '.gz'.
+        Generate the full file path for a given file name.
+
+        Parameters
+        ----------
+        file_name
+            The name of the file.
+
+        Returns
+        -------
+            The complete file Path, ensuring it ends with '.gz'.
         """
         if not file_name.endswith(".gz"):
             file_name += ".gz"
@@ -72,15 +113,18 @@ class DataManager:
 
     def append_data_to_file(self, file_name: str, data: Any):
         """
-        Save data to a gzip compressed file in the base directory by appending.
-        Handles errors in file operations and data serialization.
+        Append data to a gzip compressed file.
+
+        This method serializes the given data using `pickle` and appends
+        it to a gzip compressed file. If the file does not exist, it is
+        created.
 
         Parameters
         ----------
         file_name
-            The name of the file to save the data to.
+            The name of the file to append data to.
         data
-            The data to be saved. Can be any Python object.
+            The data to be saved. Can be any serializable Python object.
         """
         file_path = self._get_file_path(file_name)
         try:
@@ -92,8 +136,10 @@ class DataManager:
 
     def load_data(self, file_name: str) -> Iterable[dict[str, Any]]:
         """
-        Load and generate data from a gzip compressed file.
-        Handles errors in file operations and data deserialization.
+        Load and yield data from a gzip compressed file.
+
+        This method deserializes and yields data from a gzip compressed
+        file. It handles file reading and data deserialization errors.
 
         Parameters
         ----------
@@ -102,7 +148,7 @@ class DataManager:
 
         Yields
         ------
-            Yields data objects from the file.
+            Yields deserialized data objects from the file.
         """
         file_path = self._get_file_path(file_name)
         try:

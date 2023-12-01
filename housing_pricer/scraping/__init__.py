@@ -2,5 +2,6 @@
 Exporting.
 """
 # pylint: disable=useless-import-alias, unused-import
-from .scraper import Scraper as Scraper
+
 from .data_manager import DataManager as DataManager
+from .scraper import Scraper as Scraper

@@ -1,11 +1,13 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 import os
 import shutil
 import unittest
-from unittest.mock import patch, MagicMock
-from housing_pricer.scraping.scraper import Scraper, AlreadyScrapedError
+from unittest.mock import MagicMock, patch
+
 from housing_pricer.scraping.data_manager import DataManager
+from housing_pricer.scraping.scraper import AlreadyScrapedError, Scraper
 
 TEST_DATA_DIR: str = "test_data"
 

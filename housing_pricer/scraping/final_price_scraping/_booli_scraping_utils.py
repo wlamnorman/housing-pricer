@@ -1,14 +1,15 @@
-import logging
-from typing import Iterable, Any
-import re
 import json
-from bs4 import BeautifulSoup
+import logging
+import re
 from enum import auto
+from typing import Any, Iterable
+
+from bs4 import BeautifulSoup
 from strenum import StrEnum
 from tqdm import tqdm
 
-from housing_pricer.scraping.scraper import Scraper, AlreadyScrapedError, ScrapeError
 from housing_pricer.scraping.data_manager import DataManager
+from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
