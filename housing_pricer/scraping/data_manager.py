@@ -5,13 +5,9 @@ Defines the DataManager class for handling storing and loading of data.
 import gzip
 import hashlib
 import json
-import logging
 import pickle
 from pathlib import Path
 from typing import Any, Iterable
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class DataManager:
@@ -127,14 +123,11 @@ class DataManager:
             The data to be saved. Can be any serializable Python object.
         """
         file_path = self._get_file_path(file_name)
-        try:
-            with gzip.open(file_path, "ab") as gz_file:
-                pickle.dump(data, gz_file)
+        with gzip.open(file_path, "ab") as gz_file:
+            pickle.dump(data, gz_file)
 
-        except (OSError, pickle.PicklingError) as exc:
-            logger.error("Failed to save-append to %s: %s", file_path, exc)
 
-    def load_data(self, file_name: str) -> Iterable[dict[str, Any]]:
+    def load_data(self, file_name: str) -> Iterable[Any]:
         """
         Load and yield data from a gzip compressed file.
 
@@ -151,16 +144,9 @@ class DataManager:
             Yields deserialized data objects from the file.
         """
         file_path = self._get_file_path(file_name)
-        try:
-            with gzip.open(file_path, "rb") as gz_file:
-                while True:
-                    try:
-                        yield pickle.load(gz_file)
-                    except EOFError:
-                        logger.info("Finished loading data from %s", file_path)
-                        break
-                    except pickle.UnpicklingError as exc:
-                        logger.error("Failed to unpickle data from %s: %s", file_path, exc)
-
-        except OSError as exc:
-            logger.error("Failed to open file %s: %s", file_path, exc)
+        with gzip.open(file_path, "rb") as gz_file:
+            while True:
+                try:
+                    yield pickle.load(gz_file)
+                except EOFError:
+                    break
