@@ -3,9 +3,8 @@ Scraper class to handle website interactions. Includes rate limiting,
 informative error propagation, logging, re-try logic for requests and
 data management through a DataManager.
 """
-import logging
-
 # pylint: disable=too-few-public-methods
+import logging
 import time
 
 import requests
