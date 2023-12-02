@@ -136,7 +136,8 @@ class Scraper:
             return response.content
 
         except (HTTPError, RequestException) as exc:
-            raise ScrapeError() from exc
+            requested_url = f"{self.base_url}{endpoint}"
+            raise ScrapeError(msg=str(exc), call=requested_url) from exc
 
     def _throttle_requests(self):
         """
