@@ -13,15 +13,15 @@ from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Sc
 DATA_STORAGE_PATH: str = "data_storage"
 DATA_STORAGE_FILE_NAME: str = "listings_raw_html_content"
 
-SCRAPING_DURATION_HRS: int = 1
+SCRAPING_DURATION_HRS: float = 1.5
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MAX_REQUESTS_PER_MINUTE = 30
+MAX_REQUESTS_PER_MINUTE = 200
 MAX_DELAY_SECONDS = 20
 
-
+PAGE_NR_TO_START_AT = 144
 def main():
     data_manager = DataManager(DATA_STORAGE_PATH)
     booli_scraper = Scraper(
@@ -33,7 +33,7 @@ def main():
 
     scraping_duration_sec = SCRAPING_DURATION_HRS * 60**2
     start_time = time.time()
-    page_nr = 40
+    page_nr = PAGE_NR_TO_START_AT
     n_listings_scraped = 0
 
     while time.time() - start_time < scraping_duration_sec:
@@ -48,6 +48,7 @@ def main():
         ):
             listing_type = listing_meta_info["listing_type"]
             listing_id = listing_meta_info["listing_id"]
+
             # scrape listing
             try:
                 listing_content = booli_scraper.get(
