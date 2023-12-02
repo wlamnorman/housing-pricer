@@ -1,10 +1,9 @@
 """
 Scraper class to handle website interactions. Includes rate limiting,
-informative error propagation, logging, re-try logic for requests and
+informative error propagation, re-try logic for requests and
 data management through a DataManager.
 """
 # pylint: disable=too-few-public-methods
-import logging
 import time
 
 import requests
@@ -13,9 +12,6 @@ from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, RequestException
 
 from housing_pricer.scraping.data_manager import DataManager
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class ScrapeError(Exception):
@@ -89,7 +85,6 @@ class Scraper:
             response = self._session.get(f"{self.base_url}{endpoint}")
             response.raise_for_status()
             if response.status_code == 204:
-                logger.info("Received 204 No content for %s", endpoint)
                 return b""
             return response.content
 
@@ -115,7 +110,6 @@ class Scraper:
             Delay between tries in seconds.
         """
         if self._data_manager.is_endpoint_scraped(endpoint):
-            logger.info("%s already scraped", endpoint)
             raise AlreadyScrapedError(f"{endpoint} already scraped")
 
         for _ in range(tries):
@@ -125,9 +119,7 @@ class Scraper:
                     self._data_manager.mark_endpoint_scraped(endpoint)
                 return content
 
-            except ScrapeError as exc:
-                logger.error("%s, retrying in %d seconds...", exc, seconds_delay)
-                time.sleep(secs=seconds_delay)
+            except ScrapeError:
+                time.sleep(seconds_delay)
 
-        logger.info("Failed to retrieve data from %s after %s attempts.", endpoint, tries)
         return b""

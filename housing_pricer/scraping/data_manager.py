@@ -126,7 +126,6 @@ class DataManager:
         with gzip.open(file_path, "ab") as gz_file:
             pickle.dump(data, gz_file)
 
-
     def load_data(self, file_name: str) -> Iterable[Any]:
         """
         Load and yield data from a gzip compressed file.
