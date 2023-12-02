@@ -4,7 +4,7 @@ from pickle import PicklingError
 
 from tqdm import tqdm
 
-from housing_pricer.scraping.booli_modelling_data._booli_scraping_utils import (
+from housing_pricer.scraping.booli_final_prices._booli_scraping_utils import (
     extract_listing_types_and_ids,
 )
 from housing_pricer.scraping.data_manager import DataManager
@@ -18,14 +18,22 @@ SCRAPING_DURATION_HRS: int = 1
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_REQUESTS_PER_MINUTE = 30
+MAX_DELAY_SECONDS = 20
+
 
 def main():
     data_manager = DataManager(DATA_STORAGE_PATH)
-    booli_scraper = Scraper("https://www.booli.se/", data_manager)
+    booli_scraper = Scraper(
+        "https://www.booli.se/",
+        data_manager,
+        max_requests_per_minute=MAX_REQUESTS_PER_MINUTE,
+        max_delay_seconds=MAX_DELAY_SECONDS,
+    )
 
     scraping_duration_sec = SCRAPING_DURATION_HRS * 60**2
     start_time = time.time()
-    page_nr = 0
+    page_nr = 40
     n_listings_scraped = 0
 
     while time.time() - start_time < scraping_duration_sec:
