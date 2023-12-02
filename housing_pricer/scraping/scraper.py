@@ -1,7 +1,7 @@
 """
 Scraper class to handle website interactions. Includes rate limiting,
-informative error propagation, re-try logic for requests and
-data management through a DataManager.
+informative error propagation, re-try logic for requests, throttling,
+and data management using a DataManager.
 """
 # pylint: disable=too-few-public-methods
 import time
@@ -47,7 +47,13 @@ class AlreadyScrapedError(Exception):
 class Scraper:
     """Provides methods for scraping webpages."""
 
-    def __init__(self, base_url: str, data_manager: DataManager, max_requests_per_minute: int = 20):
+    def __init__(
+        self,
+        base_url: str,
+        data_manager: DataManager,
+        max_requests_per_minute: int,
+        max_delay_seconds: int,
+    ):
         """
         Initialize a scraper with rate limiting and associated DataManager.
 
@@ -59,15 +65,50 @@ class Scraper:
             DataManager instance for tracking scraped data and saving data.
         max_requests_per_minute
             Max number of requests per minute.
+        max_delay_seconds
+            Max delay if max request per minute is exceeded.
         """
         self.base_url = base_url
         self._session = requests.Session()
         self._rate_limiter = Limiter(
             Rate(limit=max_requests_per_minute, interval=Duration.MINUTE),
             raise_when_fail=False,
-            max_delay=Duration.MINUTE.value,
+            max_delay=Duration.SECOND.value * max_delay_seconds,
         )
         self._data_manager = data_manager
+        self._last_request_time = None
+        self._request_interval = 60 / max_requests_per_minute
+
+    def get(self, endpoint: str, mark_endpoint: bool, tries: int = 2) -> bytes:
+        """
+        Scrape content from url with retry logic unless already scraped.
+        Sleeps after
+
+        Parameters
+        ----------
+        endpoint
+            Endpoint from which to get content from.
+        mark_endpoint
+            If endpoint should be marked as scraped in the DataManager (intended
+            to be used for when information is retrieved, not for searches).
+        tries
+            Number of request attempts.
+        """
+        if self._data_manager.is_endpoint_scraped(endpoint):
+            raise AlreadyScrapedError(f"{endpoint} already scraped")
+
+        for _ in range(tries):
+            self._throttle_requests()
+            try:
+                content = self._try_get_except(endpoint)
+                if mark_endpoint:
+                    self._data_manager.mark_endpoint_scraped(endpoint)
+                return content
+
+            except ScrapeError:
+                continue
+
+        return b""
 
     def _try_get_except(self, endpoint: str) -> bytes:
         """
@@ -84,6 +125,7 @@ class Scraper:
 
             response = self._session.get(f"{self.base_url}{endpoint}")
             response.raise_for_status()
+
             if response.status_code == 204:
                 return b""
             return response.content
@@ -91,35 +133,13 @@ class Scraper:
         except (HTTPError, RequestException) as exc:
             raise ScrapeError() from exc
 
-    def get(
-        self, endpoint: str, mark_endpoint: bool, tries: int = 2, seconds_delay: int = 1
-    ) -> bytes:
+    def _throttle_requests(self):
         """
-        Scrape content from url with retry logic unless already scraped.
-
-        Parameters
-        ----------
-        endpoint
-            Endpoint from which to get content from.
-        mark_endpoint
-            If endpoint should be marked as scraped in the DataManager (intended
-            to be used for when information is retrieved, not for searches).
-        tries
-            Number of request attempts.
-        delay
-            Delay between tries in seconds.
+        Enforces a delay between requests to adhere to the rate limit.
         """
-        if self._data_manager.is_endpoint_scraped(endpoint):
-            raise AlreadyScrapedError(f"{endpoint} already scraped")
-
-        for _ in range(tries):
-            try:
-                content = self._try_get_except(endpoint)
-                if mark_endpoint:
-                    self._data_manager.mark_endpoint_scraped(endpoint)
-                return content
-
-            except ScrapeError:
-                time.sleep(seconds_delay)
-
-        return b""
+        if self._last_request_time is not None:
+            elapsed_time = time.time() - self._last_request_time
+            wait_time = self._request_interval - elapsed_time
+            if wait_time > 0:
+                time.sleep(wait_time)
+        self._last_request_time = time.time()

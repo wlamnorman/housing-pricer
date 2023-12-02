@@ -23,7 +23,7 @@ class TestScraper(unittest.TestCase):
     def test_duplicate_endpoint_scraping(self):
         base_url = "https://example.com"
         data_manager = DataManager(TEST_DATA_DIR)
-        scraper = Scraper(base_url, data_manager)
+        scraper = Scraper(base_url, data_manager, max_requests_per_minute=20, max_delay_seconds=20)
         endpoint = "/test-endpoint"
 
         with patch("requests.Session.get") as mocked_get:
