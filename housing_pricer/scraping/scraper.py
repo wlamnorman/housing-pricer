@@ -4,6 +4,7 @@ informative error propagation, re-try logic for requests, throttling,
 and data management using a DataManager.
 """
 # pylint: disable=too-few-public-methods
+import logging
 import time
 
 import requests
@@ -12,6 +13,10 @@ from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, RequestException
 
 from housing_pricer.scraping.data_manager import DataManager
+
+# configure pyrate loggers level from INFO to WARNING
+pyrate_logger = logging.getLogger("pyrate_limiter")
+pyrate_logger.setLevel(logging.WARNING)
 
 
 class ScrapeError(Exception):
@@ -82,7 +87,6 @@ class Scraper:
     def get(self, endpoint: str, mark_endpoint: bool, tries: int = 2) -> bytes:
         """
         Scrape content from url with retry logic unless already scraped.
-        Sleeps after
 
         Parameters
         ----------
@@ -95,9 +99,9 @@ class Scraper:
             Number of request attempts.
         """
         if self._data_manager.is_endpoint_scraped(endpoint):
-            raise AlreadyScrapedError(f"{endpoint} already scraped")
+            raise AlreadyScrapedError(f"{endpoint} already scraped; skipping")
 
-        for _ in range(tries):
+        for attempt in range(tries):
             self._throttle_requests()
             try:
                 content = self._try_get_except(endpoint)
@@ -106,9 +110,10 @@ class Scraper:
                 return content
 
             except ScrapeError:
-                continue
+                if attempt == tries - 1:
+                    raise
 
-        return b""
+        raise RuntimeError("Failed to scrape content, but no ScrapeError was captured.")
 
     def _try_get_except(self, endpoint: str) -> bytes:
         """
