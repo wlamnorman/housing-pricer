@@ -6,8 +6,33 @@ import gzip
 import hashlib
 import json
 import pickle
+import signal
 from pathlib import Path
 from typing import Any, Iterable
+
+
+class DelayedKeyboardInterrupt:
+    """
+    Context manager for handling keyboard interrupts.
+
+    Ensures that keyboard interrupts can be delayed until a block of code is safely executed.
+    """
+
+    def __init__(self):
+        self.signal_received = False
+        self.old_handler = None
+
+    def __enter__(self):
+        self.signal_received = False
+        self.old_handler = signal.signal(signal.SIGINT, self._handler)
+
+    def _handler(self, sig, frame):
+        self.signal_received = (sig, frame)
+
+    def __exit__(self, _type, value, traceback):
+        signal.signal(signal.SIGINT, self.old_handler)
+        if self.signal_received:
+            self.old_handler(*self.signal_received)  # type: ignore
 
 
 class DataManager:
@@ -55,7 +80,8 @@ class DataManager:
         is persisted across sessions.
         """
         with open(self.hash_file, "w", encoding="utf-8") as file_path:
-            json.dump(list(self.scraped_endpoints), file_path)
+            with DelayedKeyboardInterrupt():
+                json.dump(list(self.scraped_endpoints), file_path)
 
     def is_endpoint_scraped(self, endpoint: str) -> bool:
         """
@@ -124,7 +150,8 @@ class DataManager:
         """
         file_path = self._get_file_path(file_name)
         with gzip.open(file_path, "ab") as gz_file:
-            pickle.dump(data, gz_file)
+            with DelayedKeyboardInterrupt():
+                pickle.dump(data, gz_file)
 
     def load_data(self, file_name: str) -> Iterable[Any]:
         """
