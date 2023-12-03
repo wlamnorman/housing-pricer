@@ -63,7 +63,7 @@ class DataManager:
         self.hash_file = self.base_dir / hash_file
         self.scraped_endpoints = self._load_scraped_endpoints()
 
-    def _load_scraped_endpoints(self):
+    def _load_scraped_endpoints(self) -> set[str]:
         """
         Load the set of scraped endpoint hashes from the hash file.
         """
