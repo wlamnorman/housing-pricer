@@ -18,15 +18,16 @@ SCRAPING_DURATION_HRS: float = 1.5
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MAX_REQUESTS_PER_MINUTE = 200
+MAX_REQUESTS_PER_MINUTE = 60
 MAX_DELAY_SECONDS = 20
 
-PAGE_NR_TO_START_AT = 144
+PAGE_NR_TO_START_AT = 760
+
+
 def main():
-    data_manager = DataManager(DATA_STORAGE_PATH)
     booli_scraper = Scraper(
-        "https://www.booli.se/",
-        data_manager,
+        base_url="https://www.booli.se/",
+        data_manager=DataManager(DATA_STORAGE_PATH),
         max_requests_per_minute=MAX_REQUESTS_PER_MINUTE,
         max_delay_seconds=MAX_DELAY_SECONDS,
     )
@@ -37,10 +38,14 @@ def main():
     n_listings_scraped = 0
 
     while time.time() - start_time < scraping_duration_sec:
-        search_result = booli_scraper.get(
-            f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
-            mark_endpoint=False,
-        )
+        try:
+            search_result = booli_scraper.get(
+                f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
+                mark_endpoint=False,
+            )
+        except ScrapeError as exc:
+            logger.info(exc)
+            continue
 
         for listing_meta_info in tqdm(
             extract_listing_types_and_ids(search_result),
@@ -66,7 +71,7 @@ def main():
 
             # save to file
             try:
-                data_manager.append_data_to_file(
+                booli_scraper.data_manager.append_data_to_file(
                     file_name=DATA_STORAGE_FILE_NAME, data=listing_content
                 )
                 n_listings_scraped += 1

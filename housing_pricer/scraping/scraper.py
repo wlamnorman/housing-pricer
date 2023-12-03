@@ -80,7 +80,7 @@ class Scraper:
             raise_when_fail=False,
             max_delay=Duration.SECOND.value * max_delay_seconds,
         )
-        self._data_manager = data_manager
+        self.data_manager = data_manager
         self._last_request_time = None
         self._request_interval = 60 / max_requests_per_minute
 
@@ -98,7 +98,7 @@ class Scraper:
         tries
             Number of request attempts.
         """
-        if self._data_manager.is_endpoint_scraped(endpoint):
+        if self.data_manager.is_endpoint_scraped(endpoint):
             raise AlreadyScrapedError(f"{endpoint} already scraped; skipping")
 
         for attempt in range(tries):
@@ -106,7 +106,7 @@ class Scraper:
             try:
                 content = self._try_get_except(endpoint)
                 if mark_endpoint:
-                    self._data_manager.mark_endpoint_scraped(endpoint)
+                    self.data_manager.mark_endpoint_scraped(endpoint)
                 return content
 
             except ScrapeError:
