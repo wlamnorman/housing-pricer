@@ -1,86 +1,55 @@
-import logging
-import time
-from pickle import PicklingError
+"""
+This module provides a command-line interface for scraping housing listings 
+from the Booli website.
+"""
 
-from tqdm import tqdm
+import click
 
-from housing_pricer.scraping.booli_final_prices._scraping_utils import (
-    extract_listing_types_and_ids,
-)
+from housing_pricer.scraping.booli_final_prices._scraping import scrape_listings
 from housing_pricer.scraping.data_manager import DataManager
-from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
+from housing_pricer.scraping.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
 DATA_STORAGE_FILE_NAME: str = "listings_raw_html_content"
 
-SCRAPING_DURATION_HRS: float = 1.5
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+@click.command()
+@click.option(
+    "--scraping_duration_hrs",
+    "-d",
+    help="Duration of scraping in hours.",
+    type=float,
+)
+@click.option(
+    "--start_page",
+    "-p",
+    help="Page number to start scraping from.",
+    default=0,
+    type=int,
+)
+def main(scraping_duration_hrs: float, start_page: int):
+    """
+    initializes the scraper and DataManager, and starts the scraping process.
+    """
 
-MAX_REQUESTS_PER_MINUTE = 60
-MAX_DELAY_SECONDS = 20
+    def _input_validation():
+        assert scraping_duration_hrs > 0
+        assert start_page > 0 and isinstance(start_page, int)
 
-PAGE_NR_TO_START_AT = 760
+    _input_validation()
 
-
-def main():
     booli_scraper = Scraper(
         base_url="https://www.booli.se/",
         data_manager=DataManager(DATA_STORAGE_PATH),
-        max_requests_per_minute=MAX_REQUESTS_PER_MINUTE,
-        max_delay_seconds=MAX_DELAY_SECONDS,
+        max_requests_per_minute=60,  # no speed increase beyond 150ish
+        max_delay_seconds=20,
     )
-
-    scraping_duration_sec = SCRAPING_DURATION_HRS * 60**2
-    start_time = time.time()
-    page_nr = PAGE_NR_TO_START_AT
-    n_listings_scraped = 0
-
-    while time.time() - start_time < scraping_duration_sec:
-        try:
-            search_result = booli_scraper.get(
-                f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
-                mark_endpoint=False,
-            )
-        except ScrapeError as exc:
-            logger.info(exc)
-            continue
-
-        for listing_meta_info in tqdm(
-            extract_listing_types_and_ids(search_result),
-            desc=f"Scraping from search page number {page_nr}...",
-        ):
-            listing_type = listing_meta_info["listing_type"]
-            listing_id = listing_meta_info["listing_id"]
-
-            # scrape listing
-            try:
-                listing_content = booli_scraper.get(
-                    f"{listing_type}/{listing_id}", mark_endpoint=True
-                ).decode()
-                if not listing_content:
-                    logger.info(
-                        "Empty content for listing %s, skipping.", f"{listing_type}/{listing_id}"
-                    )
-                    continue
-
-            except (AlreadyScrapedError, ScrapeError) as exc:
-                logger.info(exc)
-                continue
-
-            # save to file
-            try:
-                booli_scraper.data_manager.append_data_to_file(
-                    file_name=DATA_STORAGE_FILE_NAME, data=listing_content
-                )
-                n_listings_scraped += 1
-            except (OSError, PicklingError) as exc:
-                logger.error("%s", exc)
-                continue
-
-        logger.info("Scraped %d listings from %d pages", n_listings_scraped, page_nr)
-        page_nr += 1
+    scrape_listings(
+        scraper=booli_scraper,
+        data_storage_file_name=DATA_STORAGE_FILE_NAME,
+        page_nr=start_page,
+        duration_hrs=scraping_duration_hrs,
+    )
 
 
 if __name__ == "__main__":
