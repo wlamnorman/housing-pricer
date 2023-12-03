@@ -1,4 +1,6 @@
 # HousingPricer
+OBS! you need to have Github LFS installed on your machine to properly clone the project and interact with the scraped data.
+
 ## Quickstart
 To properly use the project, run the following in the root directory:
 ```
@@ -7,12 +9,8 @@ To properly use the project, run the following in the root directory:
 ```
 this sets up a virtual environment and installs the project dependencies as per instructions in the `pyproject.toml`.
 
-## Components
-* Fetch historical final prices: `historical_scraping`
-* Fetch data for listed housing: `listing_scraping`
-* Supplemental data (such as location, traveling times, in-cluster comparison): ...
-* Database interactions: ...
-* Final price predictions: ...
+## Content
+* Fetch historical final prices: `scraping/booli_final_prices/`
 
 
 ## For developers
