@@ -9,7 +9,7 @@ from housing_pricer.scraping.booli_final_prices._scraping import scrape_listings
 from housing_pricer.scraping.data_manager import DataManager
 from housing_pricer.scraping.scraper import Scraper
 
-DATA_STORAGE_PATH: str = "test"
+DATA_STORAGE_PATH: str = "data_storage"
 DATA_STORAGE_FILE_NAME: str = "listings_raw_html_content"
 
 

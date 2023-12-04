@@ -34,50 +34,49 @@ def scrape_listings(
     start_time = time.time()
     n_listings_scraped = 0
 
-    while time.time() - start_time < scraping_duration_sec:
-        try:
-            search_result = scraper.get(
-                f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
-                mark_endpoint=False,
-            )
-        except ScrapeError as exc:
-            logger.info(exc)
-            continue
-
-        for listing_meta_info in tqdm(
-            extract_listing_types_and_ids(search_result),
-            desc=f"Scraping from search page number {page_nr}...",
-        ):
-            listing_type = listing_meta_info["listing_type"]
-            listing_id = listing_meta_info["listing_id"]
-
-            # scrape listing
+    with scraper.data_manager:
+        while time.time() - start_time < scraping_duration_sec:
             try:
-                listing_content = scraper.get(
-                    f"{listing_type}/{listing_id}", mark_endpoint=True
-                ).decode()
-                if not listing_content:
-                    logger.info(
-                        "Empty content for listing %s, skipping.", f"{listing_type}/{listing_id}"
-                    )
-                    continue
-
-            except (AlreadyScrapedError, ScrapeError) as exc:
+                search_result = scraper.get(
+                    f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
+                    mark_endpoint=False,
+                )
+            except ScrapeError as exc:
                 logger.info(exc)
                 continue
 
-            # save to file
-            try:
-                scraper.data_manager.append_data_to_file(
-                    file_name=data_storage_file_name, data=listing_content
-                )
-                n_listings_scraped += 1
-            except (OSError, PicklingError) as exc:
-                logger.error("%s", exc)
-                continue
+            for listing_meta_info in tqdm(
+                extract_listing_types_and_ids(search_result),
+                desc=f"Scraping from search page number {page_nr}...",
+            ):
+                listing_type = listing_meta_info["listing_type"]
+                listing_id = listing_meta_info["listing_id"]
 
-        logger.info("Number of listings scraped: %d", n_listings_scraped)
-        page_nr += 1
+                # scrape listing
+                try:
+                    listing_content = scraper.get(
+                        f"{listing_type}/{listing_id}", mark_endpoint=True
+                    ).decode()
+                    if not listing_content:
+                        logger.info(
+                            "Empty content for listing %s, skipping.", f"{listing_type}/{listing_id}"
+                        )
+                        continue
+
+                except (AlreadyScrapedError, ScrapeError) as exc:
+                    logger.info(exc)
+                    continue
+
+                # save to file
+                try:
+                    scraper.data_manager.append_data_to_file(listing_content)
+                    n_listings_scraped += 1
+                except (OSError, PicklingError) as exc:
+                    logger.error("%s", exc)
+                    continue
+
+            logger.info("Number of listings scraped: %d", n_listings_scraped)
+            page_nr += 1
 
 
 def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, Any]]:

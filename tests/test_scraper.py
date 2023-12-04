@@ -1,30 +1,23 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
-import os
-import shutil
-import unittest
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from housing_pricer.scraping.data_manager import DataManager
 from housing_pricer.scraping.scraper import AlreadyScrapedError, Scraper
 
-TEST_DATA_DIR: str = "test_data"
 
+def test_duplicate_endpoint_scraping():
+    base_url = "https://example.com"
+    endpoint = "/test-endpoint"
 
-class TestScraper(unittest.TestCase):
-    def setUp(self):
-        self.data_manager_dir = TEST_DATA_DIR
-        self.endpoint_hash_file = os.path.join(self.data_manager_dir, "endpoint_hashes.json")
-
-        if os.path.exists(self.endpoint_hash_file):
-            os.remove(self.endpoint_hash_file)
-
-    def test_duplicate_endpoint_scraping(self):
-        base_url = "https://example.com"
-        data_manager = DataManager(TEST_DATA_DIR)
-        scraper = Scraper(base_url, data_manager, max_requests_per_minute=20, max_delay_seconds=20)
-        endpoint = "/test-endpoint"
+    with TemporaryDirectory() as temp_dir:
+        scraper = Scraper(
+            base_url, DataManager(temp_dir), max_requests_per_minute=20, max_delay_seconds=20
+        )
 
         with patch("requests.Session.get") as mocked_get:
             mocked_response = MagicMock()
@@ -33,19 +26,8 @@ class TestScraper(unittest.TestCase):
             mocked_response.content = b"Test Content"
             mocked_get.return_value = mocked_response
 
-            try:
-                content = scraper.get(endpoint, mark_endpoint=True)
-                self.assertEqual(content, mocked_response.content)
-            except AlreadyScrapedError:
-                self.fail("AlreadyScrapedError raised on first scrape")
+            content = scraper.get(endpoint, mark_endpoint=True)
+            assert content == mocked_response.content, "Content mismatch on first scrape"
 
-            with self.assertRaises(AlreadyScrapedError):
+            with pytest.raises(AlreadyScrapedError):
                 scraper.get(endpoint, mark_endpoint=True)
-
-    def tearDown(self):
-        if os.path.exists(self.data_manager_dir):
-            shutil.rmtree(self.data_manager_dir)
-
-
-if __name__ == "__main__":
-    unittest.main()
