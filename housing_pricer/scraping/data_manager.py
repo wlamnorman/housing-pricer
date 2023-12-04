@@ -28,7 +28,7 @@ class DataManager:
         self,
         base_dir: str,
         data_filename: str = "scraped_html_content.gz",
-        hash_filename: str = "scraped_endpoint_hashes.json",
+        hash_filename: str = "_scraped_endpoint_hashes.json",
     ):
         """
         Initialize the DataManager with a specified base directory.
