@@ -28,7 +28,7 @@ class ListingType(StrEnum):
 
 
 def scrape_listings(
-    scraper: Scraper, data_storage_file_name: str, page_nr: int, duration_hrs: float
+    scraper: Scraper, page_nr: int, duration_hrs: float
 ):
     scraping_duration_sec = duration_hrs * 60**2
     start_time = time.time()

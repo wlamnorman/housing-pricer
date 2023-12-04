@@ -10,7 +10,6 @@ from housing_pricer.scraping.data_manager import DataManager
 from housing_pricer.scraping.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
-DATA_STORAGE_FILE_NAME: str = "listings_raw_html_content"
 
 
 @click.command()
@@ -47,7 +46,6 @@ def main(scraping_duration_hrs: float, start_page: int):
     )
     scrape_listings(
         scraper=booli_scraper,
-        data_storage_file_name=DATA_STORAGE_FILE_NAME,
         page_nr=start_page,
         duration_hrs=scraping_duration_hrs,
     )
