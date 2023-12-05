@@ -5,7 +5,7 @@ from the Booli website.
 
 import click
 
-from housing_pricer.scraping.booli_final_prices._scraping import scrape_listings
+from housing_pricer.scraping._scraping import scrape_listings
 from housing_pricer.scraping.data_manager import DataManager
 from housing_pricer.scraping.scraper import Scraper
 
@@ -41,7 +41,7 @@ def main(scraping_duration_hrs: float, start_page: int):
     booli_scraper = Scraper(
         base_url="https://www.booli.se/",
         data_manager=DataManager(DATA_STORAGE_PATH),
-        max_requests_per_minute=150,  # no speed increase beyond 150ish
+        max_requests_per_minute=100,  # no speed increase beyond 150ish
         max_delay_seconds=20,
     )
     scrape_listings(

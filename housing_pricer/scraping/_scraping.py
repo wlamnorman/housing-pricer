@@ -5,12 +5,14 @@ Utilities for scraping Booli.
 import logging
 import re
 import time
+import json
 from enum import auto
 from pickle import PicklingError
 from typing import Any, Iterable
 
 from strenum import StrEnum
 from tqdm import tqdm
+from bs4 import BeautifulSoup, Tag
 
 from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
 
@@ -26,6 +28,11 @@ class ListingType(StrEnum):
     annons = auto()
     bostad = auto()
 
+class DataProcessingError(Exception):
+    """Exception raised for errors in data processing."""
+    def __init__(self, msg: str):
+        self.msg = msg
+        super().__init__(self.msg)
 
 def scrape_listings(
     scraper: Scraper, page_nr: int, duration_hrs: float
@@ -56,20 +63,20 @@ def scrape_listings(
                 try:
                     listing_content = scraper.get(
                         f"{listing_type}/{listing_id}", mark_endpoint=True
-                    ).decode()
-                    if not listing_content:
-                        logger.info(
-                            "Empty content for listing %s, skipping.", f"{listing_type}/{listing_id}"
-                        )
-                        continue
-
+                    )
                 except (AlreadyScrapedError, ScrapeError) as exc:
                     logger.info(exc)
                     continue
 
+                try:
+                    data = extract_relevant_data_as_json(listing_content)
+                except DataProcessingError as exc:
+                    logger.info(exc)
+                    continue
+                    
                 # save to file
                 try:
-                    scraper.data_manager.append_data_to_file(listing_content)
+                    scraper.data_manager.append_data_to_file(data)
                     n_listings_scraped += 1
                 except (OSError, PicklingError) as exc:
                     logger.error("%s", exc)
@@ -99,3 +106,37 @@ def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, A
     pattern = r"https://www\.booli\.se/(annons|bostad)/(\d+)"
     for match in re.finditer(pattern, search_content.decode()):
         yield {"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)}
+
+def extract_relevant_data_as_json(html_content: bytes | str) -> dict:
+    """
+    Process the HTML content and keep only essential data in JSON format.
+    
+    Parameters
+    ----------
+        html_content: The HTML content as bytes or str.
+
+    Returns
+    -------
+        A dictionary containing the filtered JSON data.
+
+    Raises:
+    -------
+        DataProcessingError: If any step in the data processing fails.
+    """
+    try:
+        parsed_html = BeautifulSoup(html_content, features="lxml")
+        parsed_relevant_section = parsed_html.find(name="script", attrs={"id": "__NEXT_DATA__"})
+
+        if isinstance(parsed_relevant_section, Tag) and parsed_relevant_section.string:
+            data_json = json.loads(s=parsed_relevant_section.string)
+            filtered_data_json = {key: data_json[key] for key in ['props', 'page', 'query'] if key in data_json}
+            return filtered_data_json
+        else:
+            raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
+    
+    except json.JSONDecodeError as exc:
+        raise DataProcessingError("Failed to decode JSON.") from exc
+    except (KeyError, AttributeError) as exc:
+        raise DataProcessingError("Error accessing data.") from exc
+    except Exception as exc:
+        raise DataProcessingError("Error") from exc

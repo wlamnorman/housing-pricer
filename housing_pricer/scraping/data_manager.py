@@ -27,7 +27,7 @@ class DataManager:
     def __init__(
         self,
         base_dir: str,
-        data_filename: str = "scraped_html_content.gz",
+        data_filename: str = "scraped_data.gz",
         hash_filename: str = "_scraped_endpoint_hashes.json",
     ):
         """
