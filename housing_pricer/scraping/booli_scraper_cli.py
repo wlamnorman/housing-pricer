@@ -27,7 +27,18 @@ DATA_STORAGE_PATH: str = "data_storage"
     default=0,
     type=int,
 )
-def main(scraping_duration_hrs: float, start_page: int):
+@click.option(
+    "--max_requests_per_minute",
+    "-r",
+    help="""Max number of requests to website per minute.
+            >180 does not give any speed increase.
+            NOTE: higher values mean higher risk of being flagged.""",
+    default=100,
+    type=int,
+)
+
+
+def main(scraping_duration_hrs: float, start_page: int, max_requests_per_minute: int):
     """
     initializes the scraper and DataManager, and starts the scraping process.
     """
@@ -41,7 +52,7 @@ def main(scraping_duration_hrs: float, start_page: int):
     booli_scraper = Scraper(
         base_url="https://www.booli.se/",
         data_manager=DataManager(DATA_STORAGE_PATH),
-        max_requests_per_minute=100,  # no speed increase beyond 150ish
+        max_requests_per_minute=max_requests_per_minute,
         max_delay_seconds=20,
     )
     scrape_listings(
