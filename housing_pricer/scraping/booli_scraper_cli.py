@@ -7,6 +7,7 @@ import click
 
 from housing_pricer.scraping._utils._booli_scraping import scrape_listings
 from housing_pricer.scraping.data_manager import DataManager
+from housing_pricer.scraping.scraped_dates_manager import ScrapedDatesManager
 from housing_pricer.scraping.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
@@ -21,13 +22,6 @@ DATA_STORAGE_PATH: str = "data_storage"
     type=float,
 )
 @click.option(
-    "--start_page",
-    "-p",
-    help="Page number to start scraping from.",
-    default=0,
-    type=int,
-)
-@click.option(
     "--max_requests_per_minute",
     "-r",
     help="""Max number of requests to website per minute.
@@ -36,16 +30,13 @@ DATA_STORAGE_PATH: str = "data_storage"
     default=100,
     type=int,
 )
-
-
-def main(scraping_duration_hrs: float, start_page: int, max_requests_per_minute: int):
+def main(scraping_duration_hrs: float, max_requests_per_minute: int):
     """
     initializes the scraper and DataManager, and starts the scraping process.
     """
 
     def _input_validation():
         assert scraping_duration_hrs > 0
-        assert start_page >= 0 and isinstance(start_page, int)
 
     _input_validation()
 
@@ -55,9 +46,10 @@ def main(scraping_duration_hrs: float, start_page: int, max_requests_per_minute:
         max_requests_per_minute=max_requests_per_minute,
         max_delay_seconds=20,
     )
+    scraped_dates_manager = ScrapedDatesManager(DATA_STORAGE_PATH)
     scrape_listings(
         scraper=booli_scraper,
-        page_nr=start_page,
+        scraped_dates_manager=scraped_dates_manager,
         duration_hrs=scraping_duration_hrs,
     )
 

@@ -8,19 +8,21 @@ import logging
 import re
 import time
 from enum import auto
+from itertools import count
 from pickle import PicklingError
-from typing import Any, Iterable
+from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 from strenum import StrEnum
 from tqdm import tqdm
 
+from housing_pricer.scraping.scraped_dates_manager import ScrapedDatesManager
 from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
+
+SCRAPE_BACK_TO_DATE: str = "2015-01-01"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-SEARCH: str = "sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate"
 
 
 class ListingType(StrEnum):
@@ -40,35 +42,36 @@ class DataProcessingError(Exception):
         super().__init__(self.msg)
 
 
-def scrape_listings(scraper: Scraper, page_nr: int, duration_hrs: float):
+def scrape_listings(
+    scraper: Scraper, scraped_dates_manager: ScrapedDatesManager, duration_hrs: float
+):
     """
-    Scrapes Booli listings for a specified duration, extracting relevant data 
+    Scrapes Booli listings for a specified duration, extracting relevant data
     and saving to file.
     """
 
     def fetch_listings_from_search_result(
-        scraper: Scraper, page_nr: int
-    ) -> Iterable[dict[str, Any]] | None:
+        scraper: Scraper, search_endpoint: str
+    ) -> list[dict[str, Any]] | None:
         try:
             search_result = scraper.get(
-                f"{SEARCH}&page={page_nr}",
+                f"{search_endpoint}",
                 mark_endpoint=False,
             )
             return extract_listing_types_and_ids(search_result)
+
         except ScrapeError as exc:
             logger.info(exc)
             return None
 
-    def process_listings(scraper: Scraper, listings: Iterable[dict[str, Any]]) -> int:
+    def process_listings(scraper: Scraper, listings: list[dict[str, Any]], page_nr: int) -> int:
         scraped_count = 0
         for listing_meta_info in tqdm(
             listings, desc=f"Scraping from search page number {page_nr}..."
         ):
             try:
-                listing_content = scraper.get(
-                    f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}",
-                    mark_endpoint=True,
-                )
+                endpoint = f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}"
+                listing_content = scraper.get(endpoint, mark_endpoint=True)
                 data = extract_relevant_data_as_json(listing_content)
                 scraper.data_manager.append_data_to_file(data)
                 scraped_count += 1
@@ -83,18 +86,26 @@ def scrape_listings(scraper: Scraper, page_nr: int, duration_hrs: float):
 
     start_time = time.time()
     n_listings_scraped = 0
+    dates_to_scrape = scraped_dates_manager.dates_to_scrape(back_to_date=SCRAPE_BACK_TO_DATE)
 
-    with scraper.data_manager:
+    with scraper.data_manager as data_manager, scraped_dates_manager as dates_manager:
         while time.time() - start_time < duration_hrs * 60**2:
-            listings = fetch_listings_from_search_result(scraper, page_nr)
-            if listings is not None:
-                n_listings_scraped += process_listings(scraper, listings)
+            for date in dates_to_scrape:
+                for page_nr in count():
+                    search_endpoint = (
+                        f"sok/slutpriser?maxSoldDate={date}&minSoldDate={date}&page={page_nr}"
+                    )
+                    listings = fetch_listings_from_search_result(scraper, search_endpoint)
+                    if isinstance(listings, list) and listings:
+                        n_listings_scraped += process_listings(scraper, listings, page_nr)
+                        logger.info("Number of listings scraped: %d", n_listings_scraped)
+                    break
 
-                logger.info("Number of listings scraped: %d", n_listings_scraped)
-                page_nr += 1
+                dates_manager.mark_date_scraped(date)
+                logger.info("Finished scraping date: %s", date)
 
 
-def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, Any]]:
+def extract_listing_types_and_ids(search_content: bytes) -> list[dict[str, Any]]:
     """
     Extracts listing types and IDs from the given search content.
 
@@ -107,13 +118,15 @@ def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, A
     search_content
         The HTML content of the search page.
 
-    Yields
-    ------
-        A dictionary for each listing, containing its listing type and listing id.
+    Returns
+    -------
+        List of dictionaries, each containing a listing's type and id.
     """
     pattern = r"https://www\.booli\.se/(annons|bostad)/(\d+)"
+    listings = []
     for match in re.finditer(pattern, search_content.decode()):
-        yield {"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)}
+        listings.append({"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)})
+    return listings
 
 
 def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
