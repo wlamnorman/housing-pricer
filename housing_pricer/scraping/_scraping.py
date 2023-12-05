@@ -1,18 +1,19 @@
 """
 Utilities for scraping Booli.
 """
+import json
+
 # pylint: disable=invalid-name
 import logging
 import re
 import time
-import json
 from enum import auto
 from pickle import PicklingError
 from typing import Any, Iterable
 
+from bs4 import BeautifulSoup, Tag
 from strenum import StrEnum
 from tqdm import tqdm
-from bs4 import BeautifulSoup, Tag
 
 from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
 
@@ -28,15 +29,16 @@ class ListingType(StrEnum):
     annons = auto()
     bostad = auto()
 
+
 class DataProcessingError(Exception):
     """Exception raised for errors in data processing."""
+
     def __init__(self, msg: str):
         self.msg = msg
         super().__init__(self.msg)
 
-def scrape_listings(
-    scraper: Scraper, page_nr: int, duration_hrs: float
-):
+
+def scrape_listings(scraper: Scraper, page_nr: int, duration_hrs: float):
     scraping_duration_sec = duration_hrs * 60**2
     start_time = time.time()
     n_listings_scraped = 0
@@ -73,7 +75,7 @@ def scrape_listings(
                 except DataProcessingError as exc:
                     logger.info(exc)
                     continue
-                    
+
                 # save to file
                 try:
                     scraper.data_manager.append_data_to_file(data)
@@ -107,10 +109,11 @@ def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, A
     for match in re.finditer(pattern, search_content.decode()):
         yield {"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)}
 
+
 def extract_relevant_data_as_json(html_content: bytes | str) -> dict:
     """
     Process the HTML content and keep only essential data in JSON format.
-    
+
     Parameters
     ----------
         html_content: The HTML content as bytes or str.
@@ -129,11 +132,12 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict:
 
         if isinstance(parsed_relevant_section, Tag) and parsed_relevant_section.string:
             data_json = json.loads(s=parsed_relevant_section.string)
-            filtered_data_json = {key: data_json[key] for key in ['props', 'page', 'query'] if key in data_json}
+            filtered_data_json = {
+                key: data_json[key] for key in ["props", "page", "query"] if key in data_json
+            }
             return filtered_data_json
-        else:
-            raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
-    
+        raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
+
     except json.JSONDecodeError as exc:
         raise DataProcessingError("Failed to decode JSON.") from exc
     except (KeyError, AttributeError) as exc:
