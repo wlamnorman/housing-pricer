@@ -99,7 +99,8 @@ def scrape_listings(
                     if isinstance(listings, list) and listings:
                         n_listings_scraped += process_listings(scraper, listings, page_nr)
                         logger.info("Number of listings scraped: %d", n_listings_scraped)
-                    break
+                    else: 
+                        break
 
                 dates_manager.mark_date_scraped(date)
                 logger.info("Finished scraping date: %s", date)
