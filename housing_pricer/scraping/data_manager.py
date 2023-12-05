@@ -8,7 +8,7 @@ import pickle
 from pathlib import Path
 from typing import Any, Iterable
 
-from housing_pricer.scraping._data_manager_utils import DelayedKeyboardInterrupt, as_hash
+from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt, as_hash
 
 
 class DataManager:

@@ -20,6 +20,8 @@ from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Sc
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+SEARCH: str = "sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate"
+
 
 class ListingType(StrEnum):
     """
@@ -39,53 +41,57 @@ class DataProcessingError(Exception):
 
 
 def scrape_listings(scraper: Scraper, page_nr: int, duration_hrs: float):
-    scraping_duration_sec = duration_hrs * 60**2
+    """
+    Scrapes Booli listings for a specified duration, extracting relevant data 
+    and saving to file.
+    """
+
+    def fetch_listings_from_search_result(
+        scraper: Scraper, page_nr: int
+    ) -> Iterable[dict[str, Any]] | None:
+        try:
+            search_result = scraper.get(
+                f"{SEARCH}&page={page_nr}",
+                mark_endpoint=False,
+            )
+            return extract_listing_types_and_ids(search_result)
+        except ScrapeError as exc:
+            logger.info(exc)
+            return None
+
+    def process_listings(scraper: Scraper, listings: Iterable[dict[str, Any]]) -> int:
+        scraped_count = 0
+        for listing_meta_info in tqdm(
+            listings, desc=f"Scraping from search page number {page_nr}..."
+        ):
+            try:
+                listing_content = scraper.get(
+                    f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}",
+                    mark_endpoint=True,
+                )
+                data = extract_relevant_data_as_json(listing_content)
+                scraper.data_manager.append_data_to_file(data)
+                scraped_count += 1
+
+            except (AlreadyScrapedError, ScrapeError, DataProcessingError) as exc:
+                logger.info(exc)
+            except (OSError, PicklingError) as exc:
+                logger.error("%s", exc)
+                continue
+
+        return scraped_count
+
     start_time = time.time()
     n_listings_scraped = 0
 
     with scraper.data_manager:
-        while time.time() - start_time < scraping_duration_sec:
-            try:
-                search_result = scraper.get(
-                    f"sok/slutpriser?areaIds=2&objectType=Lägenhet&sort=soldDate&page={page_nr}",
-                    mark_endpoint=False,
-                )
-            except ScrapeError as exc:
-                logger.info(exc)
-                continue
+        while time.time() - start_time < duration_hrs * 60**2:
+            listings = fetch_listings_from_search_result(scraper, page_nr)
+            if listings is not None:
+                n_listings_scraped += process_listings(scraper, listings)
 
-            for listing_meta_info in tqdm(
-                extract_listing_types_and_ids(search_result),
-                desc=f"Scraping from search page number {page_nr}...",
-            ):
-                listing_type = listing_meta_info["listing_type"]
-                listing_id = listing_meta_info["listing_id"]
-
-                # scrape listing
-                try:
-                    listing_content = scraper.get(
-                        f"{listing_type}/{listing_id}", mark_endpoint=True
-                    )
-                except (AlreadyScrapedError, ScrapeError) as exc:
-                    logger.info(exc)
-                    continue
-
-                try:
-                    data = extract_relevant_data_as_json(listing_content)
-                except DataProcessingError as exc:
-                    logger.info(exc)
-                    continue
-
-                # save to file
-                try:
-                    scraper.data_manager.append_data_to_file(data)
-                    n_listings_scraped += 1
-                except (OSError, PicklingError) as exc:
-                    logger.error("%s", exc)
-                    continue
-
-            logger.info("Number of listings scraped: %d", n_listings_scraped)
-            page_nr += 1
+                logger.info("Number of listings scraped: %d", n_listings_scraped)
+                page_nr += 1
 
 
 def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, Any]]:
@@ -110,7 +116,7 @@ def extract_listing_types_and_ids(search_content: bytes) -> Iterable[dict[str, A
         yield {"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)}
 
 
-def extract_relevant_data_as_json(html_content: bytes | str) -> dict:
+def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
     """
     Process the HTML content and keep only essential data in JSON format.
 

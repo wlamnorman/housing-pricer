@@ -5,7 +5,7 @@ from the Booli website.
 
 import click
 
-from housing_pricer.scraping._scraping import scrape_listings
+from housing_pricer.scraping._utils._booli_scraping import scrape_listings
 from housing_pricer.scraping.data_manager import DataManager
 from housing_pricer.scraping.scraper import Scraper
 
