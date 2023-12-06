@@ -1,6 +1,4 @@
 # HousingPricer
-OBS! you need to have Github LFS installed on your machine to properly clone the project and interact with the scraped data.
-
 ## Quickstart
 To properly use the project, run the following in the root directory:
 ```
