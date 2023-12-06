@@ -4,7 +4,7 @@
 
 from tempfile import TemporaryDirectory
 
-from housing_pricer.scraping.data_manager import DataManager
+from housing_pricer.scraping.sdk.data_manager import DataManager
 
 MOCK_ENDPOINT = "http://example.com"
 MOCK_DATA = {

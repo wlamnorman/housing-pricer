@@ -5,10 +5,10 @@ from the Booli website.
 
 import click
 
-from housing_pricer.scraping._utils._booli_scraping import scrape_listings
-from housing_pricer.scraping.data_manager import DataManager
-from housing_pricer.scraping.scraped_dates_manager import ScrapedDatesManager
-from housing_pricer.scraping.scraper import Scraper
+from housing_pricer.scraping._booli_scraping import scrape_listings
+from housing_pricer.scraping.sdk.data_manager import DataManager
+from housing_pricer.scraping.sdk.scraped_dates_manager import ScrapedDatesManager
+from housing_pricer.scraping.sdk.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
 

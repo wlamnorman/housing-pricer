@@ -16,8 +16,8 @@ from bs4 import BeautifulSoup, Tag
 from strenum import StrEnum
 from tqdm import tqdm
 
-from housing_pricer.scraping.scraped_dates_manager import ScrapedDatesManager
-from housing_pricer.scraping.scraper import AlreadyScrapedError, ScrapeError, Scraper
+from housing_pricer.scraping.sdk.scraped_dates_manager import ScrapedDatesManager
+from housing_pricer.scraping.sdk.scraper import AlreadyScrapedError, ScrapeError, Scraper
 
 SCRAPE_BACK_TO_DATE: str = "2015-01-01"
 
