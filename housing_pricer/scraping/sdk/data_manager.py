@@ -10,7 +10,7 @@ from typing import Any, Iterable
 
 from tqdm import tqdm
 
-from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt
+from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
 
 class DataManager:

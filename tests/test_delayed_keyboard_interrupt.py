@@ -4,7 +4,7 @@
 import signal
 import time
 
-from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt
+from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
 
 def long_running_operation():

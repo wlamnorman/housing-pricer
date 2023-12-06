@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from housing_pricer.scraping.data_manager import DataManager
-from housing_pricer.scraping.scraper import AlreadyScrapedError, Scraper
+from housing_pricer.scraping.sdk.data_manager import DataManager
+from housing_pricer.scraping.sdk.scraper import AlreadyScrapedError, Scraper
 
 MOCK_URL = "https://example.com"
 MOCK_ENDPOINT = "/test-endpoint/1337"

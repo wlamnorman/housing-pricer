@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
-from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt
+from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
 
 class ScrapedDatesManager:

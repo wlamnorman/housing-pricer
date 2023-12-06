@@ -5,7 +5,7 @@
 import os
 from tempfile import TemporaryDirectory
 
-from housing_pricer.scraping.scraped_dates_manager import ScrapedDatesManager
+from housing_pricer.scraping.sdk.scraped_dates_manager import ScrapedDatesManager
 
 TODAY: str = "2023-12-05"
 BACK_TO_DATE: str = "2023-12-01"
