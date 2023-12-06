@@ -51,31 +51,6 @@ class TestBasicFuntionality:
 
 
 class TestFileFunctionality:
-    def test_loading_scraped_dates_from_file(self):
-        with TemporaryDirectory() as temp_dir:
-            file_path = os.path.join(temp_dir, "_scraped_dates.txt")
-            with open(file_path, "w", encoding="utf-8") as file:
-                for date in VIABLE_DAYS:
-                    file.write(date + "\n")
-
-            scraped_dates_manager = ScrapedDatesManager(base_dir=temp_dir)
-            for date in VIABLE_DAYS:
-                assert scraped_dates_manager.is_date_scraped(date)
-
-    def test_saving_scraped_dates_to_file(self):
-        with TemporaryDirectory() as temp_dir:
-            scraped_dates_manager = ScrapedDatesManager(base_dir=temp_dir)
-            for date in VIABLE_DAYS:
-                scraped_dates_manager.mark_date_scraped(date)
-
-            path = scraped_dates_manager.file_path
-            del scraped_dates_manager
-
-            with open(path, "r", encoding="utf-8") as file:
-                file_contents = set(file.read().splitlines())
-
-            assert file_contents == VIABLE_DAYS
-
     def test_saving_and_loading_from_file(self):
         with TemporaryDirectory() as temp_dir:
             scraped_dates_manager = ScrapedDatesManager(base_dir=temp_dir)

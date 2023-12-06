@@ -39,7 +39,8 @@ class ScrapedDatesManager:
         if self.file_path.exists():
             with open(self.file_path, "r", encoding="utf-8") as file:
                 for date in file.read().splitlines():
-                    scraped_dates.add(date)
+                    if date:
+                        scraped_dates.add(date)
         return scraped_dates
 
     def mark_date_scraped(self, date: str):
@@ -48,7 +49,7 @@ class ScrapedDatesManager:
         """
         self.scraped_dates.add(date)
         with DelayedKeyboardInterrupt():
-            self._file_handle.write(date + "\n")
+            self._file_handle.write("\n" + date)
 
     def is_date_scraped(self, date: str) -> bool:
         """
