@@ -15,6 +15,8 @@ from requests.exceptions import HTTPError, RequestException
 from housing_pricer.scraping.data_manager import DataManager
 
 # configure pyrate loggers level from INFO to WARNING
+# this removes pyrates logger to message about enforcing
+# restrictions to respect the rate limiter
 pyrate_logger = logging.getLogger("pyrate_limiter")
 pyrate_logger.setLevel(logging.WARNING)
 
@@ -33,8 +35,8 @@ class ScrapeError(Exception):
 
     def __init__(
         self,
-        msg: str | None = None,
-        call: str | None = None,
+        msg: str,
+        call: str,
         response: requests.Response | None = None,
     ):
         """
@@ -84,7 +86,7 @@ class Scraper:
         self._last_request_time = None
         self._request_interval = 60 / max_requests_per_minute
 
-    def get(self, endpoint: str, mark_endpoint: bool, tries: int = 2) -> bytes:
+    def get(self, endpoint: str, tries: int = 2) -> bytes:
         """
         Scrape content from url with retry logic unless already scraped.
 
@@ -92,9 +94,6 @@ class Scraper:
         ----------
         endpoint
             Endpoint from which to get content from.
-        mark_endpoint
-            If endpoint should be marked as scraped in the DataManager (intended
-            to be used for when information is retrieved, not for searches).
         tries
             Number of request attempts.
         """
@@ -105,8 +104,6 @@ class Scraper:
             self._throttle_requests()
             try:
                 content = self._try_get_except(endpoint)
-                if mark_endpoint:
-                    self.data_manager.mark_endpoint_scraped(endpoint)
                 return content
 
             except ScrapeError:

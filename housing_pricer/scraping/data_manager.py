@@ -1,37 +1,34 @@
 """
-Defines the DataManager class for handling storing and loading of data.
+Defines the DataManager class for handling storing and loading of data, and keeping
+track of data source.
 """
 
 import gzip
 import json
-import pickle
 from pathlib import Path
 from typing import Any, Iterable
 
-from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt, as_hash
+from tqdm import tqdm
+
+from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardInterrupt
 
 
 class DataManager:
     """
-    A class for efficiently saving and loading data to and from files.
-
     DataManager is designed to be used as a context manager when saving data, ensuring
-    proper opening and closing of the file as well as the safe storage of endpoint hashes.
-    When loading data, it does not need to be used as a context manager; data can be
-    directly read from the file using the `load_data` method.
+    proper opening and closing of the file.
 
-    The class utilizes `pickle` for serialization/deserialization and `gzip` for
-    compression, handling both binary and text data.
+    When loading data, it does not need to be used as a context manager; data can be
+    yielded from the file using the `load_data` method.
     """
 
     def __init__(
         self,
         base_dir: str,
         data_filename: str = "scraped_data.gz",
-        hash_filename: str = "_scraped_endpoint_hashes.json",
     ):
         """
-        Initialize the DataManager with a specified base directory.
+        Initialize the DataManager with a specified base directory and data file.
 
         Parameters
         ----------
@@ -40,23 +37,12 @@ class DataManager:
             saved and loaded from.
         data_filename
             The name of the file to store scraped data in.
-        hash_filename
-            The name of the file to store hashes of scraped endpoints. The
-            hashes ensure we don't scrape the same endpoint multiple times.
         """
-
-        def load_scraped_endpoints(hash_file_path: Path) -> set[str]:
-            if hash_file_path.exists():
-                with open(hash_file_path, "r", encoding="utf-8") as file_path:
-                    return set(json.load(file_path))
-            return set()
-
         self._base_dir = Path(base_dir)
         self._base_dir.mkdir(parents=True, exist_ok=True)
         self._data_file_path = self._base_dir / data_filename
         self._data_file_handle = None
-        self._hash_file_path = self._base_dir / hash_filename
-        self._scraped_endpoints = load_scraped_endpoints(self._hash_file_path)
+        self._scraped_endpoints = set()
 
     def __enter__(self):
         """
@@ -66,91 +52,87 @@ class DataManager:
         should be used when planning to save or append data to the file to ensure proper
         resource management.
 
+        The entry method also loads already scraped endpoints to avoid unnecessary
+        re-scraping of endpoints.
+
         Returns
         -------
             The instance of DataManager.
         """
+        self._load_scraped_endpoints()
         self._data_file_handle = gzip.open(self._data_file_path, "ab")
         return self
 
+    def _load_scraped_endpoints(self):
+        """
+        Loads already scraped
+        """
+        if self._data_file_path.exists():
+            for entry in tqdm(self.load_data(), desc="Loading already scraped endpoints..."):
+                self._scraped_endpoints.add(entry["id"])
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Context manager exit method for DataManager.
-
-        Saves scraped endpoint hashes to the hash file and closes the data file handle.
-        This method ensures that all operations within the context are finalized before
-        closing the file, even in the case of exceptions.
+        Context manager exit method for DataManager which ensures that the data file
+        handle is closed when exiting context.
         """
-
-        def save_scraped_endpoints(hash_file_path: Path, scraped_endpoints: set[str]):
-            with open(hash_file_path, "w", encoding="utf-8") as file_path:
-                with DelayedKeyboardInterrupt():
-                    json.dump(list(scraped_endpoints), file_path)
-
-        save_scraped_endpoints(self._hash_file_path, self._scraped_endpoints)
-
         assert self._data_file_handle is not None
         self._data_file_handle.close()
 
-    def append_data_to_file(self, data: Any):
+    def append_data_to_file(self, endpoint_id: str | int, data: dict[str, Any]):
         """
-        Append data to a gzip compressed file.
-
-        This method serializes the given data using `pickle` and appends
-        it to a gzip compressed file. If the file does not exist, it is
-        created.
+        Append data in JSON format to a gzip compressed file.
 
         Parameters
         ----------
+        id
+            A unique source identifier for the endpoint from which data was gathered.
         data
-            The data to be saved. Can be any serializable Python object.
+            The data to be saved, assumed to be in a format compatible with JSON serialization.
         """
         assert self._data_file_handle is not None
         with DelayedKeyboardInterrupt():
-            pickle.dump(data, self._data_file_handle)
+            entry = {"id": endpoint_id, "data": data}
+            json_data = json.dumps(entry).encode("utf-8")
+            self._data_file_handle.write(json_data + b"\n")
 
     def load_data(self) -> Iterable[Any]:
         """
         Load and yield data from a gzip compressed file.
 
-        This method can be called directly without the need for a context manager. It
-        opens the file for reading, deserializes, and yields data from a gzip compressed
-        file.
+        This method can be called directly without the need for a context manager.
 
         Yields
         ------
             Yields deserialized data objects from the file.
         """
         with gzip.open(self._data_file_path, "rb") as gz_file:
-            while True:
-                try:
-                    yield pickle.load(gz_file)
-                except EOFError:
-                    break
+            for item in gz_file:
+                yield json.loads(item.decode("utf-8"))
 
-    def mark_endpoint_scraped(self, endpoint: str):
+    def mark_endpoint_scraped(self, endpoint_id: str):
         """
-        Mark an endpoint as scraped by adding its hash to the set.
+        Mark an endpoint as scraped by adding its id to the
+        scraped endpoints set.
 
         Parameters
         ----------
-        endpoint
-            The endpoint URL to mark as scraped.
+        endpoint_id
+            The endpoint identifier to mark as scraped.
         """
-        endpoint_hash = as_hash(endpoint)
-        self._scraped_endpoints.add(endpoint_hash)
+        self._scraped_endpoints.add(endpoint_id)
 
-    def is_endpoint_scraped(self, endpoint: str) -> bool:
+    def is_endpoint_scraped(self, endpoint_id: str) -> bool:
         """
         Checks if an endpoint has already been scraped.
 
         Parameters
         ----------
-        endpoint
-            The endpoint URL to check.
+        endpoint_id
+            The endpoint identifier to check.
 
         Returns
         -------
             True if the endpoint has already been scraped, False otherwise.
         """
-        return as_hash(endpoint) in self._scraped_endpoints
+        return endpoint_id in self._scraped_endpoints
