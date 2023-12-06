@@ -8,7 +8,11 @@ To properly use the project, run the following in the root directory:
 this sets up a virtual environment and installs the project dependencies as per instructions in the `pyproject.toml`.
 
 ## Content
-* Fetch historical final prices: `scraping/booli_final_prices/`
+* Fetch historical final prices: `scraping/booli_scraper_cli`; for more information run
+```python
+python booli_scraper_cli --help
+```
+
 
 
 ## For developers
