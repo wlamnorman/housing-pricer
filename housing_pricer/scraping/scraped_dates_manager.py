@@ -11,60 +11,50 @@ from housing_pricer.scraping._utils._data_manager_utils import DelayedKeyboardIn
 
 class ScrapedDatesManager:
     """
-    Class to handle which dates should be scraped automatically.
-
-    Note: This class has to be used as a context manager.
+    Class to handle dates to be scraped automatically.
     """
 
     def __init__(self, base_dir: str, filename: str = "_scraped_dates.txt"):
         self._base_dir = Path(base_dir)
         self._base_dir.mkdir(parents=True, exist_ok=True)
-        self._file_path = self._base_dir / filename
-        self.scraped_dates = {}
 
-    def __enter__(self):
-        """
-        Loads scraped dates as we enter context.
-        """
-        self._load_scraped_dates_from_file()
-        return self
+        self.file_path = self._base_dir / filename
+        self.scraped_dates = self.load_scraped_dates_from_file()
 
-    def _load_scraped_dates_from_file(self):
+        # pylint: disable=consider-using-with
+        self._file_handle = open(self.file_path, "a", encoding="utf-8")
+
+    def __del__(self):
         """
-        Loads scraped dates as dict (for hash-ability).
+        Destructor that closes the file handle as instance is garbage collected.
         """
-        if self._file_path.exists():
-            with open(self._file_path, "r", encoding="utf-8") as file:
+        with self._file_handle as f_handle:
+            f_handle.close()
+
+    def load_scraped_dates_from_file(self) -> set[str]:
+        """
+        Loads scraped dates from file into memory.
+        """
+        scraped_dates = set()
+        if self.file_path.exists():
+            with open(self.file_path, "r", encoding="utf-8") as file:
                 for date in file.read().splitlines():
-                    self.scraped_dates[date] = True
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Ensures scraped dates are written to file as context is exited.
-        """
-        self._save_scraped_dates_to_file()
-
-    def _save_scraped_dates_to_file(self):
-        """
-        Writes scraped dates to file.
-        """
-        f_handle = open(self._file_path, "w", encoding="utf-8")
-        with DelayedKeyboardInterrupt(), f_handle:
-            for date, is_in_scraped_dates in self.scraped_dates.items():
-                if is_in_scraped_dates:
-                    f_handle.write(date + "\n")
+                    scraped_dates.add(date)
+        return scraped_dates
 
     def mark_date_scraped(self, date: str):
         """
-        Adds `date` to dict of scraped dates.
+        Appends `date` to file.
         """
-        self.scraped_dates[date] = True
+        self.scraped_dates.add(date)
+        with DelayedKeyboardInterrupt():
+            self._file_handle.write(date + "\n")
 
     def is_date_scraped(self, date: str) -> bool:
         """
         `True` if date is in scrated_dates else `False`.
         """
-        return self.scraped_dates[date]
+        return date in self.scraped_dates
 
     def dates_to_scrape(self, back_to_date: str, _today: str | None = None) -> Iterable[str]:
         """

@@ -85,21 +85,23 @@ def scrape_listings(
     n_listings_scraped = 0
     dates_to_scrape = scraped_dates_manager.dates_to_scrape(back_to_date=SCRAPE_BACK_TO_DATE)
 
-    with scraper.data_manager as _, scraped_dates_manager as dates_manager:
+    with scraper.data_manager:
         while time.time() - start_time < duration_hrs * 60**2:
             for date in dates_to_scrape:
+                logger.info("Starting to scrape from date: %s", date)
                 for page_nr in count():
                     search_endpoint = (
                         f"sok/slutpriser?maxSoldDate={date}&minSoldDate={date}&page={page_nr}"
                     )
                     listings = fetch_listings_from_search_result(scraper, search_endpoint)
+
                     if isinstance(listings, list) and listings:
                         n_listings_scraped += process_listings(scraper, listings, page_nr)
                         logger.info("Number of listings scraped: %d", n_listings_scraped)
                     else:
                         break
 
-                dates_manager.mark_date_scraped(date)
+                scraped_dates_manager.mark_date_scraped(date)
                 logger.info("Finished scraping date: %s", date)
 
 

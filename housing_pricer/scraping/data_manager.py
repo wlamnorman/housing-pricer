@@ -65,7 +65,7 @@ class DataManager:
 
     def _load_scraped_endpoints(self):
         """
-        Loads already scraped
+        Loads already scraped endpoints to avoid re-scraping.
         """
         if self._data_file_path.exists():
             for entry in tqdm(self.load_data(), desc="Loading already scraped endpoints..."):
