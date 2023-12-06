@@ -54,10 +54,7 @@ def scrape_listings(
         scraper: Scraper, search_endpoint: str
     ) -> list[dict[str, Any]] | None:
         try:
-            search_result = scraper.get(
-                f"{search_endpoint}",
-                mark_endpoint=False,
-            )
+            search_result = scraper.get(f"{search_endpoint}")
             return extract_listing_types_and_ids(search_result)
 
         except ScrapeError as exc:
@@ -71,9 +68,9 @@ def scrape_listings(
         ):
             try:
                 endpoint = f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}"
-                listing_content = scraper.get(endpoint, mark_endpoint=True)
+                listing_content = scraper.get(endpoint)
                 data = extract_relevant_data_as_json(listing_content)
-                scraper.data_manager.append_data_to_file(data)
+                scraper.data_manager.append_data_to_file(endpoint_id=endpoint, data=data)
                 scraped_count += 1
 
             except (AlreadyScrapedError, ScrapeError, DataProcessingError) as exc:
@@ -88,7 +85,7 @@ def scrape_listings(
     n_listings_scraped = 0
     dates_to_scrape = scraped_dates_manager.dates_to_scrape(back_to_date=SCRAPE_BACK_TO_DATE)
 
-    with scraper.data_manager as data_manager, scraped_dates_manager as dates_manager:
+    with scraper.data_manager as _, scraped_dates_manager as dates_manager:
         while time.time() - start_time < duration_hrs * 60**2:
             for date in dates_to_scrape:
                 for page_nr in count():
@@ -99,7 +96,7 @@ def scrape_listings(
                     if isinstance(listings, list) and listings:
                         n_listings_scraped += process_listings(scraper, listings, page_nr)
                         logger.info("Number of listings scraped: %d", n_listings_scraped)
-                    else: 
+                    else:
                         break
 
                 dates_manager.mark_date_scraped(date)
@@ -151,11 +148,11 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
         parsed_relevant_section = parsed_html.find(name="script", attrs={"id": "__NEXT_DATA__"})
 
         if isinstance(parsed_relevant_section, Tag) and parsed_relevant_section.string:
-            data_json = json.loads(s=parsed_relevant_section.string)
-            filtered_data_json = {
-                key: data_json[key] for key in ["props", "page", "query"] if key in data_json
-            }
-            return filtered_data_json
+            section_data_json = json.loads(s=parsed_relevant_section.string)
+            relevant_data = section_data_json["props"]["pageProps"]["__APOLLO_STATE__"]
+            relevant_data.pop("ROOT_QUERY", None)
+            return relevant_data
+
         raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
 
     except json.JSONDecodeError as exc:
