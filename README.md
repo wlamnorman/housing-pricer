@@ -12,6 +12,7 @@ this sets up a virtual environment and installs the project dependencies as per 
 ```python
 python booli_scraper_cli --help
 ```
+* Functions to process the scraped data can be found in `housing_pricer/data_processing/data_processing_utils.py` and an example of how to load and process the data is found in `housing_pricer/data_processing/data_processing_lab.ipynb`.
 
 
 
