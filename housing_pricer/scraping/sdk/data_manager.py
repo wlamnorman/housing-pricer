@@ -107,8 +107,11 @@ class DataManager:
             Yields deserialized data objects from the file.
         """
         with gzip.open(self._data_file_path, "rb") as gz_file:
-            for item in gz_file:
-                yield json.loads(item.decode("utf-8"))
+            try:
+                for item in gz_file:
+                    yield json.loads(item.decode("utf-8"))
+            except EOFError:
+                return
 
     def mark_endpoint_scraped(self, endpoint_id: str):
         """
