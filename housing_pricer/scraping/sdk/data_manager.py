@@ -122,9 +122,10 @@ class DataManager:
                         logger.error("Error decoding JSON from file: %s", exc)
                         continue
         except (EOFError, zlib.error):
-            loaded_entries = next(loaded_entries_counter)
-            self._repair_data()
-            yield from self._load_repaired_data(loaded_entries)
+            return
+            # loaded_entries = next(loaded_entries_counter)
+            # self._repair_data()
+            # yield from self._load_repaired_data(loaded_entries)
 
     def _load_repaired_data(self, entries_to_skip: int) -> Iterable[Any]:
         """
