@@ -2,16 +2,20 @@
 Defines the DataManager class for handling storing and loading of data, and keeping
 track of data source.
 """
-
+import logging
+import re
+import os
 import gzip
 import json
 from pathlib import Path
 from typing import Any, Iterable
-
+from itertools import count, islice
 from tqdm import tqdm
 
 from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class DataManager:
     """
@@ -106,12 +110,55 @@ class DataManager:
         ------
             Yields deserialized data objects from the file.
         """
-        with gzip.open(self._data_file_path, "rb") as gz_file:
-            try:
+        loaded_entries_counter = count()
+        try:
+            with gzip.open(self._data_file_path, "rb") as gz_file:
                 for item in gz_file:
+                    try:
+                        yield json.loads(item.decode("utf-8"))
+                        next(loaded_entries_counter)
+                    except json.JSONDecodeError as exc:
+                        logger.error("Error decoding JSON from file: %s", exc)
+                        continue
+        except EOFError:
+            loaded_entries = next(loaded_entries_counter)
+            self._repair_data()
+            yield from self._load_repaired_data(loaded_entries)
+
+    def _load_repaired_data(self, entries_to_skip: int) -> Iterable[Any]:
+        """
+        Load and yield data from the repaired gzip compressed file.
+
+        Yields
+        ------
+            Yields deserialized data objects from the repaired file.
+        """
+        with gzip.open(self._data_file_path, "rb") as gz_file:
+            for item in islice(gz_file, entries_to_skip):
+                try:
                     yield json.loads(item.decode("utf-8"))
+                except json.JSONDecodeError as e:
+                    logger.error("Error decoding JSON from repaired file: %s", e)
+                    continue
+
+
+    def _repair_data(self):
+        """
+        Attempt to repair a corrupt gzip file by reading as much valid data as possible.
+        """
+        logger.warning("Corrupt data file encountered, trying to repair %s...", self._data_file_path)
+        repaired_file_name = re.sub(r'(\.gz)$', r'_repaired\1', str(self._data_file_path))
+
+        if Path(repaired_file_name).exists():
+            os.remove(repaired_file_name)
+
+        with gzip.open(self._data_file_path, "rb") as original_file, gzip.open(repaired_file_name, "ab") as repaired_file:
+            try:
+                for item in tqdm(original_file, desc="Repairing ..."):
+                    repaired_file.write(item)
             except EOFError:
-                return
+                os.replace(repaired_file_name, self._data_file_path)
+                logger.warning("Finished repairing corrupt data file, saved as %s.", repaired_file_name)
 
     def mark_endpoint_scraped(self, endpoint_id: str):
         """
