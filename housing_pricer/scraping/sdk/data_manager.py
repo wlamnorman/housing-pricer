@@ -7,6 +7,7 @@ import re
 import os
 import gzip
 import json
+import zlib
 from pathlib import Path
 from typing import Any, Iterable
 from itertools import count, islice
@@ -120,7 +121,7 @@ class DataManager:
                     except json.JSONDecodeError as exc:
                         logger.error("Error decoding JSON from file: %s", exc)
                         continue
-        except EOFError:
+        except (EOFError, zlib.error):
             loaded_entries = next(loaded_entries_counter)
             self._repair_data()
             yield from self._load_repaired_data(loaded_entries)
