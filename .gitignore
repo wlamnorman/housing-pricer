@@ -8,4 +8,4 @@ poetry.lock
 .DS_STORE
 *.log
 .ipynb_checkpoints
-.json
+*.json

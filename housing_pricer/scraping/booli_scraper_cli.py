@@ -25,9 +25,9 @@ DATA_STORAGE_PATH: str = "data_storage"
     "--max_requests_per_minute",
     "-r",
     help="""Max number of requests to website per minute.
-            >180 does not give any speed increase.
+            >200 does not give any speed increase.
             NOTE: higher values mean higher risk of being flagged.""",
-    default=100,
+    default=200,
     type=int,
 )
 def main(scraping_duration_hrs: float, max_requests_per_minute: int):
