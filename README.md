@@ -14,7 +14,8 @@ python booli_scraper_cli --help
 ```
 * Functions to process the scraped data can be found in `housing_pricer/data_processing/data_processing_utils.py` and an example of how to load and process the data is found in `housing_pricer/data_processing/data_processing_lab.ipynb`.
 
-
+## Data access
+* The data can only be accessed via google drive which requires permission.
 
 ## For developers
 This projects uses

@@ -2,18 +2,18 @@
 Defines the DataManager class for handling storing and loading of data, and keeping
 track of data source.
 """
-import logging
-import gzip
 import json
-import zlib
+import logging
 from pathlib import Path
 from typing import Any, Iterable
+
 from tqdm import tqdm
 
 from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class DataManager:
     """
@@ -27,7 +27,7 @@ class DataManager:
     def __init__(
         self,
         base_dir: str,
-        data_filename: str = "scraped_data.gz",
+        data_filename: str = "scraped_data",
     ):
         """
         Initialize the DataManager with a specified base directory and data file.
@@ -38,11 +38,11 @@ class DataManager:
             The base directory path as a string where data files will be
             saved and loaded from.
         data_filename
-            The name of the file to store scraped data in.
+            The name of the JSON file to store scraped data in.
         """
         self._base_dir = Path(base_dir)
         self._base_dir.mkdir(parents=True, exist_ok=True)
-        self._data_file_path = self._base_dir / data_filename
+        self._data_file_path = self._base_dir / f"{data_filename}.json"
         self._data_file_handle = None
         self._scraped_endpoints = set()
 
@@ -62,7 +62,7 @@ class DataManager:
             The instance of DataManager.
         """
         self._load_scraped_endpoints()
-        self._data_file_handle = gzip.open(self._data_file_path, "ab")
+        self._data_file_handle = open(self._data_file_path, "a", encoding="utf-8")
         return self
 
     def _load_scraped_endpoints(self):
@@ -75,7 +75,7 @@ class DataManager:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Context manager exit method for DataManager which ensures that the data file
+        Context manager exit method for DataManager which ensures that the file
         handle is closed when exiting context.
         """
         assert self._data_file_handle is not None
@@ -83,7 +83,7 @@ class DataManager:
 
     def append_data_to_file(self, endpoint_id: str | int, data: dict[str, Any]):
         """
-        Append data in JSON format to a gzip compressed file.
+        Append data in JSON format to file.
 
         Parameters
         ----------
@@ -95,12 +95,12 @@ class DataManager:
         assert self._data_file_handle is not None
         with DelayedKeyboardInterrupt():
             entry = {"id": endpoint_id, "data": data}
-            json_data = json.dumps(entry).encode("utf-8")
-            self._data_file_handle.write(json_data + b"\n")
+            json_data = json.dumps(entry)
+            self._data_file_handle.write(json_data + "\n")
 
     def load_data(self) -> Iterable[Any]:
         """
-        Load and yield data from a gzip compressed file.
+        Load and yield data from file.
 
         This method can be called directly without the need for a context manager.
 
@@ -109,14 +109,10 @@ class DataManager:
             Yields deserialized data objects from the file.
         """
         try:
-            with gzip.open(self._data_file_path, "rb") as gz_file:
-                for item in gz_file:
-                    try:
-                        yield json.loads(item.decode("utf-8"))
-                    except json.JSONDecodeError as exc:
-                        logger.error("Error decoding JSON from file: %s", exc)
-                        continue
-        except (EOFError, zlib.error):
+            with open(self._data_file_path, "r", encoding="utf-8") as data_file:
+                for entry in data_file:
+                    yield json.loads(entry)
+        except EOFError:
             return
 
     def mark_endpoint_scraped(self, endpoint_id: str):
