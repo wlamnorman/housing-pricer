@@ -1,12 +1,16 @@
 """
 Data processing utilities for Booli listings.
 """
+import logging
 from typing import Any, Iterable
 
 import pandas as pd
 from tqdm import tqdm
 
 JSONDataType = dict[str, Any]
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class MissingDataError(Exception):
@@ -21,13 +25,21 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
     """
 
     def get_sold_property_details(entry: JSONDataType) -> dict[str, Any]:
+        property_details_key_prefixes = (
+            "SoldProperty:",
+            "Listing:",
+            "ResidenceWithSoldProperty:",
+            "Residence:",
+        )
         for data_keys, property_details in entry["data"].items():
-            if data_keys.startswith(("SoldProperty:", "Listing:")):
+            if data_keys.startswith(property_details_key_prefixes):
                 return property_details
 
         entry_id: str = entry["id"]
+        available_keys: JSONDataType = entry["data"].keys()
         raise MissingDataError(
-            f"Entry with ID: {entry_id} has no 'SoldProperty' or 'Listing' data key."
+            f"""Entry with ID: {entry_id} has no data key prefix in {property_details_key_prefixes}: 
+            Available keys are {available_keys}."""
         )
 
     def parse_url_id(entry: JSONDataType):
@@ -57,7 +69,10 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
     for entry in tqdm(data, desc="Processing scraped JSON content to dataframe..."):
         try:
             property_details = get_sold_property_details(entry)
-        except MissingDataError:
+        except MissingDataError as exc:
+            logger.info(
+                "MissingDataError for entry with ID %s. See exception: %s", entry["id"], exc
+            )
             continue
 
         extracted_details = (
@@ -112,7 +127,8 @@ def get_nested_dict_value(dictionary: dict, keys: Iterable) -> Any:
         A list of keys representing the path to the desired value. Note
         that the keys have the been given in order of access.
 
-    Returns:
+    Returns
+    -------
         The value found at the nested location, or None if any key is missing
         or invalid.
     """
