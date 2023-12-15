@@ -83,6 +83,7 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
                 "days_listed": property_details.get("daysActive"),
                 "residence_type": property_details.get("objectType"),
                 "address": property_details.get("streetAddress"),
+                "tenure_form": property_details.get("tenureForm"),
                 "apartment_number": get_nested_dict_value(
                     property_details, ["apartmentNumber", "value"]
                 ),
@@ -95,6 +96,17 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
                 "sold_price": get_nested_dict_value(property_details, ["soldPrice", "raw"]),
                 "sold_price_type": property_details.get("soldPriceType"),
                 "first_price": get_nested_dict_value(property_details, ["firstPrice", "value"]),
+                "booli_valuation": get_nested_dict_value(
+                    property_details, ["estimate", "price", "raw"]
+                ),
+                "booli_valuation_lb": get_nested_dict_value(
+                    property_details, ["estimate", "low", "value"], remove_numeric_formatting=True
+                ),
+                "booli_valuation_ub": get_nested_dict_value(
+                    property_details,
+                    ["estimate", "high", "formatted"],
+                    remove_numeric_formatting=True,
+                ),
                 "monthly_payment": get_nested_dict_value(
                     property_details, ["monthlyPayment", "formatted"]
                 ),
@@ -115,7 +127,9 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
     return pd.DataFrame(listings)
 
 
-def get_nested_dict_value(dictionary: dict, keys: Iterable) -> Any:
+def get_nested_dict_value(
+    dictionary: dict, keys: Iterable, remove_numeric_formatting: bool = False
+) -> Any:
     """
     Retrieves a nested value from a dictionary based on a list of keys.
 
@@ -126,6 +140,8 @@ def get_nested_dict_value(dictionary: dict, keys: Iterable) -> Any:
     keys
         A list of keys representing the path to the desired value. Note
         that the keys have the been given in order of access.
+    remove_numeric_formatting
+        Example: If True '6 430 000' -> 6430000 else does nothing.
 
     Returns
     -------
@@ -139,4 +155,6 @@ def get_nested_dict_value(dictionary: dict, keys: Iterable) -> Any:
         else:
             return None
 
+    if remove_numeric_formatting and isinstance(current_value, str):
+        current_value = int(current_value.replace("\xa0", "").replace("kr", ""))
     return current_value
