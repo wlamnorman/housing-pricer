@@ -9,7 +9,7 @@ from housing_pricer.scraping._booli_scraping import scrape_listings
 from housing_pricer.scraping.sdk.data_manager import DataManager
 from housing_pricer.scraping.sdk.scraper import Scraper
 
-DATA_STORAGE_PATH: str = "data_storage_test"
+DATA_STORAGE_PATH: str = "data_storage"
 
 
 @click.command()
