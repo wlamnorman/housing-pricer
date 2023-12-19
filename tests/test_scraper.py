@@ -70,6 +70,6 @@ def test_raises_already_scraped_error():
     with TemporaryDirectory() as temp_dir:
         scraper = Scraper(MOCK_URL, DataManager(temp_dir), 20, 20)
 
-        scraper.data_manager.mark_endpoint_scraped(MOCK_ENDPOINT)
+        scraper.data_manager._mark_endpoint_scraped(MOCK_ENDPOINT)
         with pytest.raises(AlreadyScrapedError):
             scraper.get(MOCK_ENDPOINT)

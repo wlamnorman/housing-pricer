@@ -16,10 +16,7 @@ from bs4 import BeautifulSoup, Tag
 from strenum import StrEnum
 from tqdm import tqdm
 
-from housing_pricer.scraping.sdk.scraped_dates_manager import ScrapedDatesManager
 from housing_pricer.scraping.sdk.scraper import AlreadyScrapedError, ScrapeError, Scraper
-
-SCRAPE_BACK_TO_DATE: str = "2015-01-01"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,9 +39,7 @@ class DataProcessingError(Exception):
         super().__init__(self.msg)
 
 
-def scrape_listings(
-    scraper: Scraper, scraped_dates_manager: ScrapedDatesManager, duration_hrs: float
-):
+def scrape_listings(scraper: Scraper, duration_hrs: float):
     """
     Scrapes Booli listings for a specified duration, extracting relevant data
     and saving to file.
@@ -61,7 +56,9 @@ def scrape_listings(
             logger.info(exc)
             return None
 
-    def process_listings(scraper: Scraper, listings: list[dict[str, Any]], page_nr: int) -> int:
+    def process_listings(
+        scraper: Scraper, listings: list[dict[str, Any]], page_nr: int, date: str
+    ) -> int:
         scraped_count = 0
         for listing_meta_info in tqdm(
             listings, desc=f"Scraping from search page number {page_nr}..."
@@ -70,7 +67,7 @@ def scrape_listings(
                 endpoint = f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}"
                 listing_content = scraper.get(endpoint)
                 data = extract_relevant_data_as_json(listing_content)
-                scraper.data_manager.append_data_to_file(endpoint_id=endpoint, data=data)
+                scraper.data_manager.append_data_to_file(endpoint_id=endpoint, date=date, data=data)
                 scraped_count += 1
 
             except (AlreadyScrapedError, ScrapeError, DataProcessingError) as exc:
@@ -83,11 +80,10 @@ def scrape_listings(
 
     start_time = time.time()
     n_listings_scraped = 0
-    dates_to_scrape = scraped_dates_manager.dates_to_scrape(back_to_date=SCRAPE_BACK_TO_DATE)
 
     with scraper.data_manager:
         while time.time() - start_time < duration_hrs * 60**2:
-            for date in dates_to_scrape:
+            for date in scraper.data_manager.dates_to_scrape:
                 logger.info("Starting to scrape from date: %s", date)
                 for page_nr in count():
                     search_endpoint = (
@@ -96,12 +92,11 @@ def scrape_listings(
                     listings = fetch_listings_from_search_result(scraper, search_endpoint)
 
                     if isinstance(listings, list) and listings:
-                        n_listings_scraped += process_listings(scraper, listings, page_nr)
+                        n_listings_scraped += process_listings(scraper, listings, page_nr, date)
                         logger.info("Number of listings scraped: %d", n_listings_scraped)
                     else:
                         break
 
-                scraped_dates_manager.mark_date_scraped(date)
                 logger.info("Finished scraping date: %s", date)
 
 
@@ -129,6 +124,20 @@ def extract_listing_types_and_ids(search_content: bytes) -> list[dict[str, Any]]
     return listings
 
 
+def extract_market_status(parsed_html_response: BeautifulSoup) -> str:
+    """Extracts market status of listings html response."""
+    status = parsed_html_response.find(
+        "div",
+        {
+            # pylint: disable=line-too-long
+            "class": """py-1 rounded w-fit bg-bui-color-black text-bui-color-white inline-flex items-center justify-center font-semibold rounded px-2 text-sm"""
+        },
+    )
+    if status:
+        return status.text
+    raise DataProcessingError("Entry missing market status tag.")
+
+
 def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
     """
     Process the HTML content and keep only essential data in JSON format.
@@ -148,11 +157,13 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
     try:
         parsed_html = BeautifulSoup(html_content, features="lxml")
         parsed_relevant_section = parsed_html.find(name="script", attrs={"id": "__NEXT_DATA__"})
+        market_status = extract_market_status(parsed_html)
 
         if isinstance(parsed_relevant_section, Tag) and parsed_relevant_section.string:
             section_data_json = json.loads(s=parsed_relevant_section.string)
             relevant_data = section_data_json["props"]["pageProps"]["__APOLLO_STATE__"]
             relevant_data.pop("ROOT_QUERY", None)
+            relevant_data["market_status"] = market_status
             return relevant_data
 
         raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
@@ -161,5 +172,3 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
         raise DataProcessingError("Failed to decode JSON.") from exc
     except (KeyError, AttributeError) as exc:
         raise DataProcessingError("Error accessing data.") from exc
-    except Exception as exc:
-        raise DataProcessingError("Error") from exc

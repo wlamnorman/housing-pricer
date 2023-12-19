@@ -7,10 +7,9 @@ import click
 
 from housing_pricer.scraping._booli_scraping import scrape_listings
 from housing_pricer.scraping.sdk.data_manager import DataManager
-from housing_pricer.scraping.sdk.scraped_dates_manager import ScrapedDatesManager
 from housing_pricer.scraping.sdk.scraper import Scraper
 
-DATA_STORAGE_PATH: str = "data_storage"
+DATA_STORAGE_PATH: str = "data_storage_test"
 
 
 @click.command()
@@ -46,10 +45,8 @@ def main(scraping_duration_hrs: float, max_requests_per_minute: int):
         max_requests_per_minute=max_requests_per_minute,
         max_delay_seconds=20,
     )
-    scraped_dates_manager = ScrapedDatesManager(DATA_STORAGE_PATH)
     scrape_listings(
         scraper=booli_scraper,
-        scraped_dates_manager=scraped_dates_manager,
         duration_hrs=scraping_duration_hrs,
     )
 
