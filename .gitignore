@@ -9,3 +9,4 @@ poetry.lock
 *.log
 .ipynb_checkpoints
 *.json
+*.pickle

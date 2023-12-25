@@ -24,7 +24,7 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
     Processes scraped JSON data, extracts details and reformats to dataframe.
     """
 
-    def get_sold_property_details(entry: JSONDataType) -> dict[str, Any]:
+    def get_sold_property_details(entry: JSONDataType) -> JSONDataType:
         property_details_key_prefixes = (
             "SoldProperty:",
             "Listing:",
@@ -71,13 +71,16 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
             property_details = get_sold_property_details(entry)
         except MissingDataError as exc:
             logger.info(
-                "MissingDataError for entry with ID %s. See exception: %s", entry["id"], exc
+                "MissingDataError for entry with ID %s. See exception: %s",
+                entry["id"],
+                exc,
             )
             continue
 
         extracted_details = (
             parse_url_id(entry)
             | {
+                # "market_status": entry["data"]["market_status"],
                 "booli_id": property_details.get("booliId"),
                 "sold_date": property_details.get("soldDate"),
                 "days_listed": property_details.get("daysActive"),
@@ -91,16 +94,27 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
                 "municipality": get_nested_dict_value(
                     property_details, ["location", "region", "municipalityName"]
                 ),
+                "living_area": get_nested_dict_value(
+                    property_details, ["livingArea", "raw"]
+                ),
                 "construction_year": property_details.get("constructionYear"),
-                "list_price": get_nested_dict_value(property_details, ["listPrice", "raw"]),
-                "sold_price": get_nested_dict_value(property_details, ["soldPrice", "raw"]),
+                "list_price": get_nested_dict_value(
+                    property_details, ["listPrice", "raw"]
+                ),
+                "sold_price": get_nested_dict_value(
+                    property_details, ["soldPrice", "raw"]
+                ),
                 "sold_price_type": property_details.get("soldPriceType"),
-                "first_price": get_nested_dict_value(property_details, ["firstPrice", "value"]),
+                "first_price": get_nested_dict_value(
+                    property_details, ["firstPrice", "value"]
+                ),
                 "booli_valuation": get_nested_dict_value(
                     property_details, ["estimate", "price", "raw"]
                 ),
                 "booli_valuation_lb": get_nested_dict_value(
-                    property_details, ["estimate", "low", "value"], remove_numeric_formatting=True
+                    property_details,
+                    ["estimate", "low", "value"],
+                    remove_numeric_formatting=True,
                 ),
                 "booli_valuation_ub": get_nested_dict_value(
                     property_details,
@@ -111,8 +125,12 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
                     property_details, ["monthlyPayment", "formatted"]
                 ),
                 "rent": get_nested_dict_value(property_details, ["rent", "raw"]),
-                "operating_cost": get_nested_dict_value(property_details, ["operatingCost", "raw"]),
-                "energy_class": get_nested_dict_value(property_details, ["energyClass", "score"]),
+                "operating_cost": get_nested_dict_value(
+                    property_details, ["operatingCost", "raw"]
+                ),
+                "energy_class": get_nested_dict_value(
+                    property_details, ["energyClass", "score"]
+                ),
                 "floor": get_nested_dict_value(property_details, ["floor", "value"]),
                 "building_floors": property_details.get("buildingFloors"),
                 "latitude": property_details.get("latitude"),
