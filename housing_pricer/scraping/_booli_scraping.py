@@ -16,7 +16,11 @@ from bs4 import BeautifulSoup, Tag
 from strenum import StrEnum
 from tqdm import tqdm
 
-from housing_pricer.scraping.sdk.scraper import AlreadyScrapedError, ScrapeError, Scraper
+from housing_pricer.scraping.utilities.scraper import (
+    AlreadyScrapedError,
+    ScrapeError,
+    Scraper,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -67,7 +71,9 @@ def scrape_listings(scraper: Scraper, duration_hrs: float):
                 endpoint = f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}"
                 listing_content = scraper.get(endpoint)
                 data = extract_relevant_data_as_json(listing_content)
-                scraper.data_manager.append_data_to_file(endpoint_id=endpoint, date=date, data=data)
+                scraper.data_manager.append_data_to_file(
+                    endpoint_id=endpoint, date=date, data=data
+                )
                 scraped_count += 1
 
             except (AlreadyScrapedError, ScrapeError, DataProcessingError) as exc:
@@ -86,14 +92,18 @@ def scrape_listings(scraper: Scraper, duration_hrs: float):
             for date in scraper.data_manager.dates_to_scrape:
                 logger.info("Starting to scrape from date: %s", date)
                 for page_nr in count():
-                    search_endpoint = (
-                        f"sok/slutpriser?maxSoldDate={date}&minSoldDate={date}&page={page_nr}"
+                    search_endpoint = f"sok/slutpriser?maxSoldDate={date}&minSoldDate={date}&page={page_nr}"
+                    listings = fetch_listings_from_search_result(
+                        scraper, search_endpoint
                     )
-                    listings = fetch_listings_from_search_result(scraper, search_endpoint)
 
                     if isinstance(listings, list) and listings:
-                        n_listings_scraped += process_listings(scraper, listings, page_nr, date)
-                        logger.info("Number of listings scraped: %d", n_listings_scraped)
+                        n_listings_scraped += process_listings(
+                            scraper, listings, page_nr, date
+                        )
+                        logger.info(
+                            "Number of listings scraped: %d", n_listings_scraped
+                        )
                     else:
                         break
 
@@ -120,7 +130,9 @@ def extract_listing_types_and_ids(search_content: bytes) -> list[dict[str, Any]]
     pattern = r"https://www\.booli\.se/(annons|bostad)/(\d+)"
     listings = []
     for match in re.finditer(pattern, search_content.decode()):
-        listings.append({"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)})
+        listings.append(
+            {"listing_type": ListingType[match.group(1)], "listing_id": match.group(2)}
+        )
     return listings
 
 
@@ -156,7 +168,9 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
     """
     try:
         parsed_html = BeautifulSoup(html_content, features="lxml")
-        parsed_relevant_section = parsed_html.find(name="script", attrs={"id": "__NEXT_DATA__"})
+        parsed_relevant_section = parsed_html.find(
+            name="script", attrs={"id": "__NEXT_DATA__"}
+        )
         market_status = extract_market_status(parsed_html)
 
         if isinstance(parsed_relevant_section, Tag) and parsed_relevant_section.string:
@@ -166,7 +180,9 @@ def extract_relevant_data_as_json(html_content: bytes | str) -> dict[str, Any]:
             relevant_data["market_status"] = market_status
             return relevant_data
 
-        raise DataProcessingError("Relevant script tag with specified id not found in html-parser.")
+        raise DataProcessingError(
+            "Relevant script tag with specified id not found in html-parser."
+        )
 
     except json.JSONDecodeError as exc:
         raise DataProcessingError("Failed to decode JSON.") from exc

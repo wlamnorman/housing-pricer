@@ -12,7 +12,7 @@ from pyrate_limiter import Duration, Rate
 from pyrate_limiter.limiter import Limiter
 from requests.exceptions import HTTPError, RequestException
 
-from housing_pricer.scraping.sdk.data_manager import DataManager
+from housing_pricer.scraping.utilities.data_manager import DataManager
 
 # configure pyrate loggers level from INFO to WARNING
 # this removes pyrates logger to message about enforcing

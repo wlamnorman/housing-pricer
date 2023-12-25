@@ -4,7 +4,9 @@
 import signal
 import time
 
-from housing_pricer.scraping.sdk.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
+from housing_pricer.scraping.utilities.delayed_keyboard_interrupt import (
+    DelayedKeyboardInterrupt,
+)
 
 
 def long_running_operation():
@@ -40,4 +42,6 @@ def test_delayed_keyboard_interrupt_restores_original_handler():
     current_handler = signal.getsignal(signal.SIGINT)
 
     signal.signal(signal.SIGINT, original_handler)
-    assert current_handler == dummy_handler, "Signal handler was not restored to its original state"
+    assert (
+        current_handler == dummy_handler
+    ), "Signal handler was not restored to its original state"

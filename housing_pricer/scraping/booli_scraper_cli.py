@@ -6,8 +6,8 @@ from the Booli website.
 import click
 
 from housing_pricer.scraping._booli_scraping import scrape_listings
-from housing_pricer.scraping.sdk.data_manager import DataManager
-from housing_pricer.scraping.sdk.scraper import Scraper
+from housing_pricer.scraping.utilities.data_manager import DataManager
+from housing_pricer.scraping.utilities.scraper import Scraper
 
 DATA_STORAGE_PATH: str = "data_storage"
 

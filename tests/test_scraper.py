@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from housing_pricer.scraping.sdk.data_manager import DataManager
-from housing_pricer.scraping.sdk.scraper import AlreadyScrapedError, Scraper
+from housing_pricer.scraping.utilities.data_manager import DataManager
+from housing_pricer.scraping.utilities.scraper import AlreadyScrapedError, Scraper
 
 MOCK_URL = "https://example.com"
 MOCK_ENDPOINT = "/test-endpoint/1337"
@@ -31,7 +31,10 @@ def test_succesful_get():
     """
     with TemporaryDirectory() as temp_dir:
         scraper = Scraper(
-            MOCK_URL, DataManager(temp_dir), max_requests_per_minute=20, max_delay_seconds=20
+            MOCK_URL,
+            DataManager(temp_dir),
+            max_requests_per_minute=20,
+            max_delay_seconds=20,
         )
 
         with patch("requests.Session.get") as mocked_get:

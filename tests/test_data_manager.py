@@ -4,7 +4,7 @@
 
 from tempfile import TemporaryDirectory
 
-from housing_pricer.scraping.sdk.data_manager import DataManager
+from housing_pricer.scraping.utilities.data_manager import DataManager
 
 MOCK_ENDPOINT = "http://example.com"
 MOCK_DATA = {
@@ -143,7 +143,9 @@ class TestDatesFunctionality:
 
             with DataManager(base_dir) as data_manager:
                 dates_to_scrape = set(
-                    data_manager._get_dates_to_scrape(back_to_date=BACK_TO_DATE, _today=TODAY)
+                    data_manager._get_dates_to_scrape(
+                        back_to_date=BACK_TO_DATE, _today=TODAY
+                    )
                 )
                 assert dates_to_scrape == expected_dates_to_scrape
 
