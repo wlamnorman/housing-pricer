@@ -80,7 +80,7 @@ def format_json_to_dataframe(data: Iterable[JSONDataType]) -> pd.DataFrame:
         extracted_details = (
             parse_url_id(entry)
             | {
-                # "market_status": entry["data"]["market_status"],
+                "market_status": entry["data"]["market_status"],
                 "booli_id": property_details.get("booliId"),
                 "sold_date": property_details.get("soldDate"),
                 "days_listed": property_details.get("daysActive"),
