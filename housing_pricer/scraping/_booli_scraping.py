@@ -9,7 +9,6 @@ import re
 import time
 from enum import auto
 from itertools import count
-from pickle import PicklingError
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
@@ -71,6 +70,7 @@ def scrape_listings(scraper: Scraper, duration_hrs: float):
                 endpoint = f"{listing_meta_info['listing_type']}/{listing_meta_info['listing_id']}"
                 listing_content = scraper.get(endpoint)
                 data = extract_relevant_data_as_json(listing_content)
+
                 scraper.data_manager.append_data_to_file(
                     endpoint_id=endpoint, date=date, data=data
                 )
@@ -78,7 +78,7 @@ def scrape_listings(scraper: Scraper, duration_hrs: float):
 
             except (AlreadyScrapedError, ScrapeError, DataProcessingError) as exc:
                 logger.info(exc)
-            except (OSError, PicklingError) as exc:
+            except OSError as exc:
                 logger.error("%s", exc)
                 continue
 

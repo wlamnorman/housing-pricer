@@ -24,27 +24,18 @@ pyrate_logger.setLevel(logging.WARNING)
 class ScrapeError(Exception):
     """
     For capturing more detailed errors that occur while interacting with websites.
-
-    Attributes
-    ----------
-    call
-        The call that caused the error.
-    response
-        The HTTP response object returned by the call.
     """
 
     def __init__(
         self,
         msg: str,
-        call: str,
-        response: requests.Response | None = None,
+        call: str | None = None,
     ):
         """
-        Initialize ScrapeError with optional message, call, and response.
+        Initialize ScrapeError with optional message and the call.
         """
         super().__init__(msg)
         self.call = call
-        self.response = response
 
 
 class AlreadyScrapedError(Exception):
@@ -59,7 +50,7 @@ class Scraper:
         base_url: str,
         data_manager: DataManager,
         max_requests_per_minute: int,
-        max_delay_seconds: int,
+        max_delay_seconds: int = 10,
     ):
         """
         Initialize a scraper with rate limiting and associated DataManager.
@@ -110,7 +101,7 @@ class Scraper:
                 if attempt == tries - 1:
                     raise
 
-        raise RuntimeError("Failed to scrape content, but no ScrapeError was captured.")
+        raise ScrapeError("Get failed for unknown reason.")
 
     def _try_get_except(self, endpoint: str) -> bytes:
         """

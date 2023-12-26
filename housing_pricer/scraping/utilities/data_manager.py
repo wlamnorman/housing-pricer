@@ -10,9 +10,7 @@ from typing import Any, Iterable
 
 from tqdm import tqdm
 
-from housing_pricer.scraping.utilities.delayed_keyboard_interrupt import (
-    DelayedKeyboardInterrupt,
-)
+from housing_pricer.scraping.utilities.delayed_keyboard_interrupt import DelayedKeyboardInterrupt
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -94,10 +92,7 @@ class DataManager:
 
         def generate_date_range(end_date, start_date) -> Iterable[str]:
             n_days = (end_date - start_date).days + 1
-            yield from (
-                (end_date - timedelta(days=x)).strftime("%Y-%m-%d")
-                for x in range(n_days)
-            )
+            yield from ((end_date - timedelta(days=x)).strftime("%Y-%m-%d") for x in range(n_days))
 
         if _today is None:
             yesterday = datetime.today().date() - timedelta(days=1)
@@ -116,12 +111,8 @@ class DataManager:
         latest_scraped_date = max(dates_as_ymd_datetimes).date()
         earliest_scraped_date = min(dates_as_ymd_datetimes).date()
 
-        yield from generate_date_range(
-            end_date=yesterday, start_date=latest_scraped_date
-        )
-        yield from generate_date_range(
-            end_date=earliest_scraped_date, start_date=back_to_date_
-        )
+        yield from generate_date_range(end_date=yesterday, start_date=latest_scraped_date)
+        yield from generate_date_range(end_date=earliest_scraped_date, start_date=back_to_date_)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -131,9 +122,7 @@ class DataManager:
         assert self._data_file_handle is not None
         self._data_file_handle.close()
 
-    def append_data_to_file(
-        self, endpoint_id: str | int, date: str, data: dict[str, Any]
-    ):
+    def append_data_to_file(self, endpoint_id: str | int, date: str, data: dict[str, Any]):
         """
         Append data in JSON format to file.
 
