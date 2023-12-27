@@ -8,9 +8,9 @@ import re
 from pyppeteer import launch
 
 
-def scrape_address_coordinates(gata: str, gatunummer: str, ort: str):
+def geocode_address(gata: str, gatunummer: str, ort: str):
     """
-    Asyncio wrapper for scraping coordinates from address.
+    Asyncio wrapper for scraping coordinates from address using Google Maps.
     """
     coordinates = asyncio.run(
         _scrape_google_maps_address_coordinates(gata, gatunummer, ort)
