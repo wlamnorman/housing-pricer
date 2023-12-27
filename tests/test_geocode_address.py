@@ -1,4 +1,4 @@
-from housing_pricer.valuation_api._utilities.address_to_coordinates import (
+from housing_pricer.valuation_api._utilities.geocode_address import (
     _extract_coordinates,
     _format_search_query,
 )
